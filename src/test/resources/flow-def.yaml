@@ -1,0 +1,31 @@
+code: flow1
+steps:
+  - code: init
+    workers:
+
+    - code: worker_1
+      path: /worker_1
+      method: POST
+      headers:
+        custom1: custom1
+        $custom2: worker_1
+      params:
+        a: a
+        $b: "3"
+      labels:
+        name: value
+
+    - code: worker_2
+      $path: "'sxsxssx'"
+      method: POST
+      params:
+        a: a
+        $b: "3"
+      labels:
+        name: value
+
+response:
+  $val: $step.finish.task_5
+labels:
+  label1: label1
+  label2: label2

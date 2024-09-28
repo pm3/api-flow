@@ -1,0 +1,16 @@
+id: flow-id
+tenant: aston
+caseType: type1
+externalId: '12345'
+callback:
+  url: /callback
+  headers:
+    header: value
+params:
+  param1: value1
+  param2: 1
+assets:
+  - id: asset1
+    extName: asset1
+created: '2024-07-07T07:19:56Z'
+state: init

@@ -1,0 +1,42 @@
+tasks:
+  - id: task1
+    flowCaseId: flow-id
+    step: init
+    worker: worker_1
+    response: {"resp":"ok"}
+    created: '2024-07-07T07:14:38Z'
+    started: '2024-07-07T07:14:38Z'
+    finished: '2024-07-07T07:14:38Z'
+
+  - id: task2
+    flowCaseId: flow-id
+    step: photo
+    worker: worker_2
+    assetId: asset1
+    response: {"resp":"ok"}
+    created: '2024-07-07T07:14:38Z'
+    started: '2024-07-07T07:14:38Z'
+    finished: '2024-07-07T07:14:38Z'
+
+  - id: task3
+    flowCaseId: flow-id
+    step: photo
+    worker: worker_3
+    assetId: asset1
+    error: {"error":"FileNotFound"}
+    created: '2024-07-07T07:14:38Z'
+    started: '2024-07-07T07:14:38Z'
+    finished: '2024-07-07T07:14:38Z'
+
+  - id: task4
+    flowCaseId: flow-id
+    step: photo
+    worker: worker_4
+    assetId: asset1
+    created: '2024-07-07T07:14:38Z'
+
+  - id: task5
+    flowCaseId: flow-id
+    step: finish
+    worker: worker_5
+    created: '2024-07-07T07:14:38Z'

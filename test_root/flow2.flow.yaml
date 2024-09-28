@@ -1,0 +1,51 @@
+code: flow2
+steps:
+  - code: init
+    workers:
+      - code: prepare
+        path: /flow/sum
+        method: POST
+        params:
+          $a: case.params.a
+          $b: case.params.b
+
+  - code: photos
+    workers:
+
+      - code: _iterator
+        params:
+          $items: case.assets
+
+      - code: worker_1
+        path: /flow/sum
+        method: POST
+        params:
+          $a: step.init.prepare.c
+          b: "2"
+          $asset: asset.url
+
+      - code: worker_2
+        path: /flow/sum
+        method: POST
+        params:
+          $a: worker_1.c
+          b: "3"
+
+  - code: finish
+    workers:
+
+      - code: calculate
+        path: /flow/sum
+        method: POST
+        params:
+          $a: case.params.a
+          $b: case.params.b
+
+response:
+  $sum: finish.calculate
+
+labels:
+  label1: label1
+  label2: label2
+paramsAssetExpr: asset
+paramsExternalIdExpr: externalId
