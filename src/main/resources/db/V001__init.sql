@@ -21,6 +21,7 @@ create table flow_task (
     responseCode int,
     response text,
     error text,
+    timeout int,
     created timestamp not null,
     started timestamp,
     finished timestamp,

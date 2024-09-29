@@ -71,8 +71,13 @@ public class ZipkinSpanSender implements ISpanSender {
     }
 
     private void sendCache(List<ZipkinSpan> cache0) {
+
         try{
             String data = objectMapper.writeValueAsString(cache0);
+            if(zipkinUrl.equals("none")){
+                for(ZipkinSpan s : cache0) LOGGER.info("span {}", objectMapper.writeValueAsString(s));
+                return;
+            }
             HttpRequest.Builder b = HttpRequest
                     .newBuilder()
                     .uri(new URI(zipkinUrl))

@@ -224,6 +224,7 @@ public class FlowCaseManager {
             if(next.getItemsExpr()!=null){
                 //spustam iterator
                 FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), flowCase.getId(), next.getCode(), FlowTask.STEP_ITERATOR, -1);
+                taskEntity.setTimeout(flowDefStore.getDefaultTimeout());
                 taskStore.insert(taskEntity);
                 tasks.add(taskEntity);
                 return next.getCode();
@@ -241,6 +242,7 @@ public class FlowCaseManager {
         List<FlowTaskEntity> tasks = new ArrayList<>();
         for (FlowWorkerDef worker : step.getWorkers()){
             FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), caseId, step.getCode(), worker.getCode(), stepIndex);
+            taskEntity.setTimeout(worker.getTimeout()!=null ? worker.getTimeout() : flowDefStore.getDefaultTimeout());
             taskStore.insert(taskEntity);
             tasks.add(taskEntity);
         }

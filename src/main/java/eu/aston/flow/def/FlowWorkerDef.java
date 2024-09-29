@@ -15,6 +15,7 @@ public class FlowWorkerDef {
     private String where;
     private Map<String, String> labels;
     private boolean blocked;
+    private Integer timeout;
 
     public String getCode() {
         return code;
@@ -86,6 +87,14 @@ public class FlowWorkerDef {
 
     public void setBlocked(boolean blocked) {
         this.blocked = blocked;
+    }
+
+    public Integer getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(Integer timeout) {
+        this.timeout = timeout;
     }
 
     @Override

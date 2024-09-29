@@ -61,6 +61,7 @@ public class AppFactory {
                                      JwtVerify jwtVerify,
                                      NodeJsFlowExecutor nodeJsFlowExecutor){
         FlowDefStore flowDefStore = new FlowDefStore(httpClient, objectMapper, jwtVerify, nodeJsFlowExecutor);
+        flowDefStore.setDefaultTimeout(120);
         flowDefStore.loadRoot(root, false);
         return flowDefStore;
     }

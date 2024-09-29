@@ -19,6 +19,7 @@ public class FlowTaskEntity {
     private Object response;
     private String error;
 
+    private Integer timeout;
     private Instant created;
     private Instant started;
     private Instant finished;
@@ -98,6 +99,14 @@ public class FlowTaskEntity {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public Integer getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(Integer timeout) {
+        this.timeout = timeout;
     }
 
     public Instant getCreated() {

@@ -28,8 +28,8 @@ public class SumServer implements HttpHandler {
         try {
 
             SumServer workerServer = new SumServer(null);
-            Executor executor = Executors.newSingleThreadExecutor();
-            executor.execute(workerServer::worker);
+            //Executor executor = Executors.newSingleThreadExecutor();
+            //executor.execute(workerServer::worker);
 
             Executor executor2 = Executors.newSingleThreadExecutor();
             int port = 8081;

@@ -42,6 +42,7 @@ public class FlowDefStore {
     private final Map<String, FlowWorkerDef> workerMap = new ConcurrentHashMap<>();
     private final ObjectMapper yamlObjectMapper;
     private final NodeJsFlowExecutor nodeJsFlowExecutor;
+    private Integer defaultTimeout;
 
     public FlowDefStore(HttpClient httpClient, ObjectMapper objectMapper, JwtVerify jwtVerify, NodeJsFlowExecutor nodeJsFlowExecutor) {
         this.jwtVerify = jwtVerify;
@@ -216,4 +217,11 @@ public class FlowDefStore {
         }
     }
 
+    public Integer getDefaultTimeout() {
+        return defaultTimeout;
+    }
+
+    public void setDefaultTimeout(Integer defaultTimeout) {
+        this.defaultTimeout = defaultTimeout;
+    }
 }
