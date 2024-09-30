@@ -5,21 +5,13 @@ import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.blob.AzureBlobAuthBuilder;
 import eu.aston.blob.BlobStore;
-import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
-import eu.aston.flow.IFlowExecutor;
-import eu.aston.flow.WaitingFlowCaseManager;
 import eu.aston.flow.nodejs.NodeJsFlowExecutor;
-import eu.aston.flow.store.IFlowCaseStore;
-import eu.aston.flow.store.IFlowTaskStore;
-import eu.aston.header.CallbackRunner;
-import eu.aston.queue.QueueStore;
-import eu.aston.span.ISpanSender;
 import eu.aston.utils.JwtVerify;
 import eu.aston.utils.SuperTimer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
@@ -65,32 +57,4 @@ public class AppFactory {
         flowDefStore.loadRoot(root, false);
         return flowDefStore;
     }
-
-    @Singleton
-    public FlowCaseManager flowCaseManager(BlobStore blobStore,
-                                           IFlowCaseStore caseStore,
-                                           IFlowTaskStore taskStore,
-                                           FlowDefStore flowDefStore,
-                                           IFlowExecutor[] executors,
-                                           WaitingFlowCaseManager waitingFlowCaseManager,
-                                           ISpanSender spanSender,
-                                           QueueFlowBridge queueFlowBridge,
-                                           CallbackRunner callbackRunner) {
-        FlowCaseManager flowCaseManager = new FlowCaseManager(blobStore,caseStore,taskStore,flowDefStore,
-                                                              executors, waitingFlowCaseManager, spanSender,
-                                                              callbackRunner);
-        queueFlowBridge.setFlowCaseManager(flowCaseManager);
-        return flowCaseManager;
-    }
-
-    @Singleton
-    public QueueStore queueStore(HttpClient httpClient,
-                                 SuperTimer superTimer,
-                                 QueueFlowBridge queueFlowBridge,
-                                 CallbackRunner callbackRunner) {
-        QueueStore queueStore = new QueueStore(superTimer, queueFlowBridge, callbackRunner);
-        queueFlowBridge.setQueueStore(queueStore);
-        return queueStore;
-    }
-
 }

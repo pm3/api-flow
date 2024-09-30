@@ -7,8 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import ognl.Ognl;
 import ognl.OgnlException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class FlowScript {

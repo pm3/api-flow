@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.flow.def.AuthDef;
 import eu.aston.flow.def.BaseAuthDef;
 import eu.aston.flow.def.FlowDef;
@@ -25,10 +29,6 @@ import eu.aston.user.UserException;
 import eu.aston.utils.BaseValid;
 import eu.aston.utils.Hash;
 import eu.aston.utils.JwtVerify;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

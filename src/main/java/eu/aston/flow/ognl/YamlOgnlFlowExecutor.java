@@ -10,10 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import eu.aston.AppConfig;
 import eu.aston.flow.FlowDefStore;
-import eu.aston.flow.IFlowBridge;
 import eu.aston.flow.IFlowExecutor;
+import eu.aston.flow.QueueFlowBridge;
 import eu.aston.flow.def.FlowDef;
 import eu.aston.flow.def.FlowStepDef;
 import eu.aston.flow.def.FlowWorkerDef;
@@ -24,9 +27,6 @@ import eu.aston.header.CallbackRunner;
 import eu.aston.header.HeaderConverter;
 import eu.aston.user.UserException;
 import eu.aston.utils.Hash;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import jakarta.inject.Singleton;
 import ognl.OgnlException;
 import org.slf4j.Logger;
@@ -39,13 +39,13 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
 
     public static final String ID = "yaml";
     private final FlowDefStore flowDefStore;
-    private final IFlowBridge flowBridge;
+    private final QueueFlowBridge flowBridge;
     private final AppConfig appConfig;
     private final byte[] taskApiKeySecret;
     private final ObjectMapper objectMapper;
     private final CallbackRunner callbackRunner;
 
-    public YamlOgnlFlowExecutor(FlowDefStore flowDefStore, IFlowBridge flowBridge, AppConfig appConfig,
+    public YamlOgnlFlowExecutor(FlowDefStore flowDefStore, QueueFlowBridge flowBridge, AppConfig appConfig,
                                 ObjectMapper objectMapper, CallbackRunner callbackRunner) {
         this.flowDefStore = flowDefStore;
         this.flowBridge = flowBridge;
@@ -208,7 +208,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
                 throw e;
             }
         }
-        if(flowBridge!=null && flowBridge.sendQueueEvent(task.getFlowCaseId(), task.getId(), method, path, headers, data)){
+        if(flowBridge.sendQueueEvent(task, method, path, headers, data, flowBack)){
             return;
         }
         URI uri = new URI(path);
@@ -222,6 +222,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         headers2.put("X-B3-TraceId", task.getFlowCaseId());
         headers2.put("X-B3-SpanId", task.getId().substring(0,15)+"2");
 
+        flowBack.sentTask(task);
         if(blocked){
             callbackRunner.callAsync(method, uri, headers2, data, HttpResponse.BodyHandlers.ofByteArray())
                           .whenComplete((resp, e)-> completeCallBlocked(resp, e, task, flowBack));

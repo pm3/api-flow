@@ -14,26 +14,27 @@ import java.util.function.Consumer;
 
 import eu.aston.header.CallbackRunner;
 import eu.aston.utils.SuperTimer;
-import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
-import io.micronaut.http.HttpStatus;
-import io.micronaut.http.MediaType;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Singleton
 public class QueueStore {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueueStore.class);
     private final ConcurrentHashMap<String, QueueEvent> eventMap = new ConcurrentHashMap<>();
     private final TreeMap<String, WorkerGroup> workerTree = new TreeMap<>();
     private final SuperTimer superTimer;
-    private final IQueueBridge queueBridge;
     private final CallbackRunner callbackRunner;
 
-    public QueueStore(SuperTimer superTimer, IQueueBridge queueBridge, CallbackRunner callbackRunner) {
+    public QueueStore(SuperTimer superTimer, CallbackRunner callbackRunner) {
         this.superTimer = superTimer;
-        this.queueBridge = queueBridge;
         this.callbackRunner = callbackRunner;
         superTimer.schedulePeriod(Duration.ofMinutes(10).toMillis(), this::cleanSentEventMap);
+    }
+
+    public SuperTimer getSuperTimer() {
+        return superTimer;
     }
 
     public WorkerGroup workerGroupByPath(String path) {
@@ -46,17 +47,14 @@ public class QueueStore {
         return null;
     }
 
-    public void addEvent(QueueEvent event, int timeout) {
+    public void addEvent(QueueEvent event) {
         WorkerGroup workerGroup = workerGroupByPath(event.getPath());
-        addEvent(workerGroup, event, timeout);
+        addEvent(workerGroup, event);
     }
 
-    public void addEvent(WorkerGroup workerGroup, QueueEvent event, int timeout) {
+    public void addEvent(WorkerGroup workerGroup, QueueEvent event) {
         LOGGER.debug("addEvent {} {} => {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
         eventMap.put(event.getId(), event);
-        if (timeout > 0 && event.getWaitingWriter()!=null) {
-            superTimer.schedule(timeout * 1000L, event.getId(), this::responseTimeout);
-        }
         if (workerGroup != null) {
             boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
             if (!sent) {
@@ -70,17 +68,6 @@ public class QueueStore {
 
     private void response503(String requestId){
         response(requestId, 503, null, "<h1>Service Unavailable</h1>".getBytes(StandardCharsets.UTF_8));
-    }
-
-    private void responseTimeout(String requestId) {
-        QueueEvent event = eventMap.remove(requestId);
-        var w = event.clearWaitingWriter();
-        if (w != null) {
-            event.setT3(504);
-            w.complete(HttpResponse.status(HttpStatus.GATEWAY_TIMEOUT)
-                                   .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML)
-                                   .body("<h1>Gateway Timeout</h1>"));
-        }
     }
 
     private boolean nextWorker(WorkerGroup workerGroup, Consumer<CompletableFuture<HttpResponse<?>>> sender) {
@@ -105,10 +92,14 @@ public class QueueStore {
 
     private void sendRemoteEvent(QueueEvent event, CompletableFuture<HttpResponse<?>> w) {
         event.setT2(System.currentTimeMillis());
-        w.complete(HttpResponse.ok((Object) event.getBody()).headers(new HashMap<>(event.getHeaders())));
-        if(queueBridge!=null) {
-            queueBridge.queueEventSent(event.getId());
+        if(event.getHandleSend()!=null){
+            try{
+                event.getHandleSend().run();
+            }catch (Exception e){
+                LOGGER.warn("event {} handleSend error {}", event.getId(), e.getMessage());
+            }
         }
+        w.complete(HttpResponse.ok((Object) event.getBody()).headers(new HashMap<>(event.getHeaders())));
     }
 
     public void workerQueue(Worker worker) {
@@ -158,15 +149,12 @@ public class QueueStore {
         QueueEvent event = eventMap.remove(eventId);
         if (event != null) {
             event.setT3(status);
-            var w = event.clearWaitingWriter();
-            if (w != null) {
-                w.complete(HttpResponse.ok((Object) body).headers(new HashMap<>(headers)));
-                LOGGER.debug("event response {}", event);
-            } else if (event.getCallback()!=null) {
+            if(event.getHandleResponse()!=null){
+                event.getHandleResponse().accept(new EventResponse(status, headers, body));
+            }
+            if (event.getCallback()!=null) {
                 if(event.getCallback().headers()!=null) headers.putAll(event.getCallback().headers());
                 callbackRunner.callbackAsync(eventId, event.getCallback(), headers, body);
-            } else if(queueBridge!=null && !queueBridge.eventResponse(event, status, headers, body)){
-                LOGGER.debug("event without callback {}", eventId);
             }
         }
     }

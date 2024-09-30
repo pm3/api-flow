@@ -8,6 +8,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
@@ -25,8 +27,6 @@ import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
 import eu.aston.utils.BaseValid;
 import eu.aston.utils.ID;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.MapType;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;

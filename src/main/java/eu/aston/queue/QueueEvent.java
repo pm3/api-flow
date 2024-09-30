@@ -2,10 +2,9 @@ package eu.aston.queue;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import eu.aston.header.Callback;
-import io.micronaut.http.HttpResponse;
 
 public class QueueEvent {
     private String id;
@@ -20,7 +19,8 @@ public class QueueEvent {
     private long t2;
     private long t3;
 
-    private CompletableFuture<HttpResponse<Object>> waitingWriter;
+    private Runnable handleSend;
+    private Consumer<EventResponse> handleResponse;
 
     public String getId() {
         return id;
@@ -94,17 +94,19 @@ public class QueueEvent {
         this.t3 = t3;
     }
 
-    public CompletableFuture<HttpResponse<Object>> getWaitingWriter() {
-        return waitingWriter;
+    public Runnable getHandleSend() {
+        return handleSend;
     }
 
-    public void setWaitingWriter(CompletableFuture<HttpResponse<Object>> waitingWriter) {
-        this.waitingWriter = waitingWriter;
+    public void setHandleSend(Runnable handleSend) {
+        this.handleSend = handleSend;
     }
 
-    public synchronized CompletableFuture<HttpResponse<Object>> clearWaitingWriter(){
-        var w = this.waitingWriter;
-        this.waitingWriter = null;
-        return w;
+    public Consumer<EventResponse> getHandleResponse() {
+        return handleResponse;
+    }
+
+    public void setHandleResponse(Consumer<EventResponse> handleResponse) {
+        this.handleResponse = handleResponse;
     }
 }

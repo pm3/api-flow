@@ -11,14 +11,14 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import eu.aston.header.HeaderConverter;
-import eu.aston.user.UserException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import eu.aston.header.HeaderConverter;
+import eu.aston.user.UserException;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.MediaType;
 
@@ -28,8 +28,8 @@ public class SumServer implements HttpHandler {
         try {
 
             SumServer workerServer = new SumServer(null);
-            //Executor executor = Executors.newSingleThreadExecutor();
-            //executor.execute(workerServer::worker);
+            Executor executor = Executors.newSingleThreadExecutor();
+            executor.execute(workerServer::worker);
 
             Executor executor2 = Executors.newSingleThreadExecutor();
             int port = 8081;
@@ -60,8 +60,10 @@ public class SumServer implements HttpHandler {
             exchange.sendResponseHeaders(201, 0);
             exchange.getResponseBody().close();
             Map<String, String> headers = new HashMap<>();
+            System.out.println("callback: "+callback);
             exchange.getRequestHeaders().forEach((k,v)->{
-                if(k.toLowerCase().startsWith(HeaderConverter.H_CALLBACK_PREFIX)) headers.put(k.substring(12), v.getFirst());
+                System.out.println(k+": "+v);
+                if(k.toLowerCase().startsWith(HeaderConverter.H_CALLBACK_PREFIX)) headers.put(k.substring(HeaderConverter.H_CALLBACK_PREFIX.length()), v.getFirst());
             });
             executor.execute(()->sendCallback(callback, headers, respBody));
         } else {
@@ -110,12 +112,13 @@ public class SumServer implements HttpHandler {
 
     private void sendCallback(String callback, Map<String, String> headers, byte[] respBody) {
         try{
+            System.out.println(callback+" "+headers);
             HttpRequest.Builder b = HttpRequest.newBuilder();
             b.uri(new URI(callback));
             b.POST(HttpRequest.BodyPublishers.ofByteArray(respBody));
             b.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
             headers.forEach(b::header);
-            HttpResponse<Void> resp = httpClient.send(b.build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<String> resp = httpClient.send(b.build(), HttpResponse.BodyHandlers.ofString());
             System.out.println("send callback "+new String(respBody));
             System.out.println("callback response "+resp.statusCode());
         }catch (Exception e){
@@ -140,10 +143,11 @@ public class SumServer implements HttpHandler {
         System.out.println("call worker");
         HttpRequest r = HttpRequest.newBuilder()
                 .GET()
-                .uri(new URI("http://localhost:8080/.queue/worker?path=/queue/sum"))
+                .uri(new URI("http://localhost:8080/.queue/worker?path=/queue/sum&workerId=w1"))
+                .header("X-Api-Key", "api-flow")
                 .build();
         HttpResponse<byte[]> resp = httpClient.send(r, HttpResponse.BodyHandlers.ofByteArray());
-        System.out.println(r.uri()+" "+resp.statusCode());
+        System.out.println(r.uri()+" "+resp.statusCode()+" "+new String(resp.body()));
         resp.headers().map().forEach((k,v)-> System.out.println(k+": "+v.getFirst()));
 
         if(resp.statusCode()==200 && resp.body().length>0) {
@@ -152,7 +156,7 @@ public class SumServer implements HttpHandler {
             String eventId = resp.headers().firstValue(HeaderConverter.H_ID).orElse(null);
             if(eventId!=null){
                 String callback = "http://localhost:8080/.queue/response/"+eventId;
-                sendCallback(callback, Map.of(HeaderConverter.H_STATUS, "200"), respBody);
+                sendCallback(callback, Map.of(HeaderConverter.H_STATUS, "200", "X-Api-Key", "api-flow"), respBody);
             }
         } else {
             Thread.sleep(500);

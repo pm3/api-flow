@@ -2,9 +2,9 @@ package eu.aston;
 
 import java.io.IOException;
 
-import eu.aston.header.HeaderConverter;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import eu.aston.header.HeaderConverter;
 
 public class EchoHandler implements HttpHandler {
 

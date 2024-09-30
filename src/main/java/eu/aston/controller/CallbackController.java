@@ -3,15 +3,13 @@ package eu.aston.controller;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.AppConfig;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.header.HeaderConverter;
-import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
 import eu.aston.utils.Hash;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Body;
@@ -21,7 +19,6 @@ import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.exceptions.HttpStatusException;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
@@ -43,14 +40,13 @@ public class CallbackController {
 
     @Operation(tags = {"internal"})
     @Post(uri = "/response/{taskId}", consumes = MediaType.APPLICATION_JSON)
-    public void response(HttpRequest<byte[]> request,
-                         @PathVariable String taskId,
+    public void response(@PathVariable String taskId,
                          @Nullable @Header(HeaderConverter.H_STATUS) Integer callbackStatus,
-                         @Body byte[] data,
-                         @Parameter(hidden = true) UserContext userContext){
+                         @Nullable @Header("X-Api-Key") String requestApiKey,
+                         @Body byte[] data) {
 
         String apiKey = Hash.hmacSha1(taskId.getBytes(StandardCharsets.UTF_8), taskApiKeySecret);
-        if(!Objects.equals(apiKey, request.getHeaders().getFirst("X-Api-Key").orElse(null))){
+        if(!Objects.equals(apiKey, requestApiKey)){
             throw new HttpStatusException(HttpStatus.FORBIDDEN, "invalid X-Api-Key");
         }
 

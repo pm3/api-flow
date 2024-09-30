@@ -18,7 +18,7 @@ public class FlowThreadPool {
     private final ConcurrentHashMap<String, String> flowsMap = new ConcurrentHashMap<>();
 
     public FlowThreadPool(int size, Consumer<String> flowExecutor) {
-        this.executor = Executors.newSingleThreadExecutor();
+        this.executor = Executors.newFixedThreadPool(size);
         this.flowExecutor = flowExecutor;
     }
 

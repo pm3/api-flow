@@ -29,9 +29,11 @@ import eu.aston.utils.FlowThreadPool;
 import eu.aston.utils.ID;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.MediaType;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Singleton
 public class FlowCaseManager {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(FlowCaseManager.class);
