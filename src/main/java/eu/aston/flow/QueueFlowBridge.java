@@ -32,7 +32,8 @@ public class QueueFlowBridge {
 
     public boolean sendQueueEvent(FlowTaskEntity task, String method, String path, Map<String, String> headers, byte[] body, IFlowExecutor.IFlowBack flowBack){
         if(queueStore!=null && path.startsWith(QUEUE_PREFIX) && path.length()> QUEUE_PREFIX.length()){
-            LOGGER.debug("sendQueueEvent {}/{} {}", task.getFlowCaseId(), task.getId(), path);
+            path = path.substring(QUEUE_PREFIX.length()-1);
+            LOGGER.info("event {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
             if(headers==null) headers = new HashMap<>();
             QueueEvent event = new QueueEvent();
             event.setId(task.getId());

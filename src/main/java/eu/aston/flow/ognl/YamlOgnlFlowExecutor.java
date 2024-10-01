@@ -222,6 +222,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         headers2.put("X-B3-TraceId", task.getFlowCaseId());
         headers2.put("X-B3-SpanId", task.getId().substring(0,15)+"2");
 
+        LOGGER.info("http task {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
         flowBack.sentTask(task);
         if(blocked){
             callbackRunner.callAsync(method, uri, headers2, data, HttpResponse.BodyHandlers.ofByteArray())

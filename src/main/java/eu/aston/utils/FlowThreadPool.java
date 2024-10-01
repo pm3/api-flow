@@ -29,7 +29,6 @@ public class FlowThreadPool {
     }
 
     private void runFlow(String caseId, String taskId){
-        LOGGER.debug("runFlow {} {}", caseId, taskId);
         try{
             flowExecutor.accept(caseId);
         }catch (Exception e){

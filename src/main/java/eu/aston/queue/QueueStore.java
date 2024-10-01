@@ -56,14 +56,19 @@ public class QueueStore {
         LOGGER.debug("addEvent {} {} => {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
         eventMap.put(event.getId(), event);
         if (workerGroup != null) {
+            LOGGER.debug("event without worker {} {}", event.getPath(), event.getId());
             boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
             if (!sent) {
                 LOGGER.debug("waiting in queue {}", event.getId());
-                workerGroup.events.add(event);
+                workerGroup.events.add(event.getId());
             }
         } else {
             superTimer.schedule(120 * 1000L, event.getId(), this::response503);
         }
+    }
+
+    public QueueEvent removeEvent(String eventId){
+        return eventMap.remove(eventId);
     }
 
     private void response503(String requestId){
@@ -115,7 +120,13 @@ public class QueueStore {
             }
         }
         workerGroup.lastWorker = System.currentTimeMillis();
-        QueueEvent event = workerGroup.events.poll();
+        QueueEvent event = null;
+        while(!workerGroup.events.isEmpty() && event==null) {
+            String eventId = workerGroup.events.poll();
+            if(eventId!=null){
+                event = eventMap.get(eventId);
+            }
+        }
         if (event != null) {
             sendRemoteEvent(event, worker.removeResponse());
         } else {
@@ -129,7 +140,7 @@ public class QueueStore {
         for (QueueEvent event : list){
             boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
             if (!sent) {
-                workerGroup.events.add(event);
+                workerGroup.events.add(event.getId());
             }
         }
     }

@@ -76,7 +76,7 @@ public class FlowCaseManager {
     }
 
     public void createFlow(String id, FlowCaseCreate caseCreate) {
-
+        LOGGER.info("start flow {} {}", caseCreate.caseType(), id);
         Instant created = Instant.now();
         FlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
                                       .orElseThrow(()->new UserException("invalid flowCaseType "+caseCreate.caseType()));
@@ -151,12 +151,13 @@ public class FlowCaseManager {
     }
 
     private void nextTick(String flowCaseId) {
-
         FlowCaseEntity flowCase = caseStore.loadById(flowCaseId)
                                       .orElseThrow(()->new UserException("invalid flowCaseId "+flowCaseId));
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                                       .orElseThrow(()->new UserException("invalid flowCaseType id="+flowCase.getId()+", type="+flowCase.getCaseType()));
         List<FlowTaskEntity> tasks = taskStore.selectTaskByCaseId(flowCase.getId());
+
+        LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getState());
 
         String aktStepCode = openTasks(flowDef, flowCase, tasks);
         if(aktStepCode!=null){
@@ -183,14 +184,22 @@ public class FlowCaseManager {
         FlowStepDef aktStep = aktState!=null ? flowDef.getSteps().stream().filter(s-> Objects.equals(s.getCode(), aktState)).findFirst().orElse(null) : null;
 
         if(aktStep!=null) {
+            int notStarted = 0;
+            int notFinished = 0;
             String step = aktStep.getCode();
-            List<FlowTaskEntity> openTasks = tasks
-                    .stream()
-                    .filter(t -> Objects.equals(step, t.getStep()) && t.getStarted() == null)
-                    .toList();
-            if (!openTasks.isEmpty()) {
+            for(FlowTaskEntity t : tasks){
+                if(Objects.equals(step, t.getStep())){
+                    if(t.getStarted() == null) notStarted++;
+                    if(t.getFinished() == null) notFinished++;
+                }
+            }
+            if (notStarted>0) {
                 //mam rozpracovany step, pokracujem v spracovani
                 return aktStep.getCode();
+            }
+            if(notFinished>0) {
+                //este nie su vsetky hotovo, cakam na dalsi tick
+                return null;
             }
 
             List<FlowTaskEntity> stepAllTasks = tasks
@@ -232,7 +241,8 @@ public class FlowCaseManager {
                 return next.getCode();
             }
             //vytvaram tasky v novom stepe bez iteratora
-            tasks.addAll(createTasks(next, flowCase.getId(), 0));
+            createTasks(next, flowCase.getId(), 0);
+            //co ak ziadne nevytvoril?
             return next.getCode();
         }
         //uz nemam next, koncim

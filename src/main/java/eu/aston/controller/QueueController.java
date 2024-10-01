@@ -18,16 +18,18 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
-import io.micronaut.http.annotation.Delete;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.http.annotation.Put;
 import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.http.exceptions.HttpStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 public class QueueController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueueController.class);
 
     private final QueueStore queueStore;
     private final String workerApiKey;
@@ -37,16 +39,14 @@ public class QueueController {
         this.workerApiKey = appConfig.getWorkerApiKey()!=null && !appConfig.getWorkerApiKey().isEmpty() ? appConfig.getWorkerApiKey() : null;
     }
 
-    @Get(value = "/queue/{path:.*}", processes = MediaType.ALL)
     @Post(value = "/queue/{path:.*}", processes = MediaType.ALL)
-    @Put(value = "/queue/{path:.*}", processes = MediaType.ALL)
-    @Delete(value = "/queue/{path:.*}", processes = MediaType.ALL)
-    public CompletableFuture<HttpResponse<Object>> send(HttpRequest<byte[]> request, @PathVariable String path, @Nullable @QueryValue("timeout") Integer timeout){
+    public CompletableFuture<HttpResponse<Object>> send(HttpRequest<byte[]> request, @PathVariable("path") String path, @Nullable @QueryValue("timeout") Integer timeout){
+        LOGGER.info("send /{}", path);
         CompletableFuture<HttpResponse<Object>> future = new CompletableFuture<>();
         QueueEvent event = new QueueEvent();
         event.setId(ID.newId());
         event.setMethod(request.getMethodName());
-        event.setPath(request.getUri().getPath());
+        event.setPath("/"+path);
         event.setHeaders(HeaderConverter.eventRequest(request.getHeaders(), event.getId(), event.getMethod(), event.getPath()));
         event.setBody(request.getBody().orElse(null));
         event.setCallback(HeaderConverter.createCallback(request.getHeaders()));
@@ -58,6 +58,7 @@ public class QueueController {
         } else {
             future.complete(HttpResponse.status(201, "accepted").header(HeaderConverter.H_ID, event.getId()));
         }
+        queueStore.addEvent(event);
         return future;
     }
 
