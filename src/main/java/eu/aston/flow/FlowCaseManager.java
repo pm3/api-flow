@@ -230,6 +230,7 @@ public class FlowCaseManager {
         }
         FlowStepDef next = nextStep(flowCase, flowDef);
         if(next!=null){
+            LOGGER.info("next step {} {}", flowCase.getId(), next.getCode());
             //spustam novy step
             caseStore.updateFlowState(flowCase.getId(), FlowCase.STEP_STATE_PREF+next.getCode());
             if(next.getItemsExpr()!=null){
@@ -241,7 +242,7 @@ public class FlowCaseManager {
                 return next.getCode();
             }
             //vytvaram tasky v novom stepe bez iteratora
-            createTasks(next, flowCase.getId(), 0);
+            tasks.addAll(createTasks(next, flowCase.getId(), 0));
             //co ak ziadne nevytvoril?
             return next.getCode();
         }
