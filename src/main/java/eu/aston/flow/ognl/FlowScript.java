@@ -1,5 +1,6 @@
 package eu.aston.flow.ognl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,18 @@ public class FlowScript {
             if(key.startsWith("$")) {
                 if (e.getValue() instanceof String expr) {
                     m2.put(key.substring(1), execExpr(expr));
+                    continue;
+                }
+                if (e.getValue() instanceof List list) {
+                    List<Object> list2 = new ArrayList<>(list.size());
+                    for(Object v : list){
+                        if(v instanceof String expr){
+                            list2.add(execExpr(expr));
+                        } else {
+                            list2.add(v);
+                        }
+                    }
+                    m2.put(key.substring(1), list2);
                     continue;
                 }
             }
