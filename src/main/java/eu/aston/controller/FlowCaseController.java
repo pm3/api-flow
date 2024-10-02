@@ -21,6 +21,7 @@ import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.model.IdValue;
+import eu.aston.flow.store.IFlowTaskStore;
 import eu.aston.header.Callback;
 import eu.aston.header.HeaderConverter;
 import eu.aston.user.UserContext;
@@ -60,16 +61,18 @@ public class FlowCaseController {
 
     private final FlowCaseManager flowCaseManager;
     private final FlowDefStore flowDefStore;
+    private final IFlowTaskStore taskStore;
     private final WaitingFlowCaseManager waitingFlowCaseManager;
     private final BlobStore blobStore;
     private final ObjectMapper objectMapper;
 
-    public FlowCaseController(FlowCaseManager flowCaseManager, FlowDefStore flowDefStore,
+    public FlowCaseController(FlowCaseManager flowCaseManager, FlowDefStore flowDefStore, IFlowTaskStore taskStore,
                               WaitingFlowCaseManager waitingFlowCaseManager,
                               BlobStore blobStore,
                               ObjectMapper objectMapper) {
         this.flowCaseManager = flowCaseManager;
         this.flowDefStore = flowDefStore;
+        this.taskStore = taskStore;
         this.waitingFlowCaseManager = waitingFlowCaseManager;
         this.blobStore = blobStore;
         this.objectMapper = objectMapper;
@@ -173,6 +176,9 @@ public class FlowCaseController {
                 LOGGER.debug("error load final case {}",e.getMessage(), e);
                 return flowCase;
             }
+        }
+        if(flowCase!=null && flowCase.getFinished()==null && flowCase.getTasks()==null){
+            flowCase.setTasks(taskStore.selectFlowTaskByCaseId(flowCase.getId()));
         }
         return flowCase;
     }
