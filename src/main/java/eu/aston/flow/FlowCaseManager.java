@@ -129,12 +129,13 @@ public class FlowCaseManager {
 
     private void finishTask0(FlowDef flowDef, FlowCaseEntity flowCase, FlowTaskEntity task, int statusCode, Object response) {
 
-        LOGGER.debug("finishTask {}/{} - {} - status {} {}", flowCase.getCaseType(), flowCase.getId(), task.getId(), statusCode, response);
+        LOGGER.info("finishTask {}/{} - {} - status {}", flowCase.getCaseType(), flowCase.getId(), task.getId(), statusCode);
 
         if(task.getFinished()!=null){
             throw new UserException("task is finished "+ task.getId());
         }
         task.setFinished(Instant.now());
+        if(task.getStarted()==null) task.setStarted(task.getFinished());
 
         String error = null;
         if(statusCode >=200 && statusCode <=202){
