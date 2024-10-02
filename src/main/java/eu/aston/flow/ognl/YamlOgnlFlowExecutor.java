@@ -161,6 +161,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             task.setStarted(Instant.now());
             task.setFinished(task.getStarted());
             task.setError(error);
+            flowBack.finishTask(task, 500, error);
         }
     }
 
