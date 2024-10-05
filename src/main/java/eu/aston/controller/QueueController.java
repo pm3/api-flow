@@ -1,6 +1,7 @@
 package eu.aston.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -8,6 +9,7 @@ import eu.aston.AppConfig;
 import eu.aston.header.HeaderConverter;
 import eu.aston.queue.EventResponse;
 import eu.aston.queue.QueueEvent;
+import eu.aston.queue.QueueStat;
 import eu.aston.queue.QueueStore;
 import eu.aston.queue.Worker;
 import eu.aston.utils.ID;
@@ -68,7 +70,7 @@ public class QueueController {
             throw new HttpStatusException(HttpStatus.FORBIDDEN, "require X-Api-Key");
         }
         CompletableFuture<HttpResponse<?>> future = new CompletableFuture<>();
-        Worker worker = new Worker(path, 30, future);
+        Worker worker = new Worker(workerId, path, 30, future);
         queueStore.workerQueue(worker);
         return future;
     }
@@ -83,6 +85,11 @@ public class QueueController {
         var headers = HeaderConverter.eventResponse(request.getHeaders(), eventId);
         LOGGER.info("queue response {} {}", eventId, status);
         queueStore.response(eventId, status, headers, request.getBody().orElse(new byte[0]));
+    }
+
+    @Get(value = "/.queue/stats")
+    public List<QueueStat> stats(){
+        return queueStore.stats();
     }
 
     public static class HandleWaitingResponse {
