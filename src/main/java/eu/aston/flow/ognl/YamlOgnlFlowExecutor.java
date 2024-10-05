@@ -145,7 +145,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
 
         String error = null;
         try{
-            sendTask(flowScript, workerDef, flowCase, task, flowBack);
+            sendTask(flowScript, workerDef, flowCase, flowDef, task, flowBack);
         }catch (WaitingException e) {
             return;
         }catch (TaskResponseException e) {
@@ -158,15 +158,13 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             error = "send to worker error "+e.getMessage();
         }
         if(error!=null){
-            task.setStarted(Instant.now());
-            task.setFinished(task.getStarted());
             task.setError(error);
-            flowBack.finishTask(task, 500, error);
+            flowBack.finishTask(task, 400, error);
         }
     }
 
     @SuppressWarnings("rawtypes")
-    private void sendTask(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task, IFlowBack flowBack) throws Exception {
+    private void sendTask(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowDef flowDef, FlowTaskEntity task, IFlowBack flowBack) throws Exception {
 
         String path = workerDef.getPath();
 
@@ -195,10 +193,10 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         }
 
         task.setStarted(Instant.now());
-        sendTaskHttp(task, workerDef.getMethod(), path, headers, params, workerDef.isBlocked(), flowBack);
+        sendTaskHttp(task, flowDef, workerDef.getMethod(), path, headers, params, workerDef.isBlocked(), flowBack);
     }
 
-    protected void sendTaskHttp(FlowTaskEntity task, String method, String path, Map<String, String> headers, Object params, boolean blocked, IFlowBack flowBack) throws Exception {
+    protected void sendTaskHttp(FlowTaskEntity task, FlowDef flowDef, String method, String path, Map<String, String> headers, Object params, boolean blocked, IFlowBack flowBack) throws Exception {
         byte[] data = null;
         if(params!=null){
             try{
@@ -224,6 +222,11 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         headers2.put("X-B3-SpanId", task.getId().substring(0,15)+"2");
 
         LOGGER.info("http task {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
+        if(data!=null && flowDef.getLabels()!=null && flowDef.getLabels().containsKey("debug")){
+            LOGGER.info("data {}", new String(data));
+        } else if(data!=null && LOGGER.isDebugEnabled()){
+            LOGGER.debug("data {}", new String(data));
+        }
         flowBack.sentTask(task);
         if(blocked){
             callbackRunner.callAsync(method, uri, headers2, data, HttpResponse.BodyHandlers.ofByteArray())
@@ -272,7 +275,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         if(t.getFinished()==null){
             resp = new WaitingException(t.getWorker());
         } else if (t.getError()!=null){
-            resp = new TaskResponseException(t.getError());
+            resp = new TaskResponseException("error "+t.getResponseCode()+" "+t.getWorker());
         }
         if(index<0){
             stepMap.put(t.getWorker(), resp);

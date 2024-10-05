@@ -21,12 +21,16 @@ import io.micronaut.http.exceptions.HttpStatusException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller("/flow")
 @SecurityRequirement(name = "ApiKeyAuth")
 @ApiResponse(responseCode = "200", description = "ok")
 @ApiResponse(responseCode = "401", description = "authorization required")
 public class CallbackController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CallbackController.class);
 
     private final FlowCaseManager flowCaseManager;
     private final ObjectMapper objectMapper;
@@ -49,8 +53,8 @@ public class CallbackController {
         if(!Objects.equals(apiKey, requestApiKey)){
             throw new HttpStatusException(HttpStatus.FORBIDDEN, "invalid X-Api-Key");
         }
-
         if(callbackStatus==null) callbackStatus = 200;
+        LOGGER.info("flow response {} {}", taskId, callbackStatus);
         try {
             if(callbackStatus>=200 && callbackStatus<300) {
                 Object root = objectMapper.readValue(data, Object.class);

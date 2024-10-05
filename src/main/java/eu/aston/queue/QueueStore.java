@@ -53,7 +53,7 @@ public class QueueStore {
     }
 
     public void addEvent(WorkerGroup workerGroup, QueueEvent event) {
-        LOGGER.debug("addEvent {} {} => {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
+        LOGGER.debug("addEvent {} {} => workerGroup {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
         eventMap.put(event.getId(), event);
         if (workerGroup != null) {
             LOGGER.debug("event without worker {} {}", event.getPath(), event.getId());
@@ -156,10 +156,11 @@ public class QueueStore {
     }
 
     public void response(String eventId, int status, Map<String, String> headers, byte[] body) {
-        LOGGER.debug("event response {} {} {}", eventId, status, new String(body));
         QueueEvent event = eventMap.remove(eventId);
         if (event != null) {
             event.setT3(status);
+            LOGGER.debug("event response {}{} {}", eventId, event.getPath(), status);
+            if(LOGGER.isDebugEnabled()) LOGGER.debug("event response body {}", new String(body));
             if(event.getHandleResponse()!=null){
                 event.getHandleResponse().accept(new EventResponse(status, headers, body));
             }

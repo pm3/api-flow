@@ -41,7 +41,7 @@ public class QueueController {
 
     @Post(value = "/queue/{path:.*}", processes = MediaType.ALL)
     public CompletableFuture<HttpResponse<Object>> send(HttpRequest<byte[]> request, @PathVariable("path") String path, @Nullable @QueryValue("timeout") Integer timeout){
-        LOGGER.info("send /{}", path);
+        LOGGER.info("queue send /{}", path);
         CompletableFuture<HttpResponse<Object>> future = new CompletableFuture<>();
         QueueEvent event = new QueueEvent();
         event.setId(ID.newId());
@@ -81,6 +81,7 @@ public class QueueController {
         }
         int status = request.getHeaders().getInt(HeaderConverter.H_STATUS);
         var headers = HeaderConverter.eventResponse(request.getHeaders(), eventId);
+        LOGGER.info("queue response {} {}", eventId, status);
         queueStore.response(eventId, status, headers, request.getBody().orElse(new byte[0]));
     }
 

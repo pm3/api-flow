@@ -76,7 +76,6 @@ public class FlowCaseManager {
     }
 
     public void createFlow(String id, FlowCaseCreate caseCreate) {
-        LOGGER.info("start flow {} {}", caseCreate.caseType(), id);
         Instant created = Instant.now();
         FlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
                                       .orElseThrow(()->new UserException("invalid flowCaseType "+caseCreate.caseType()));
@@ -282,15 +281,18 @@ public class FlowCaseManager {
     private void finishFlow(FlowCaseEntity flowCaseEntity, FlowDef flowDef, List<FlowTaskEntity> tasks) {
 
         FlowTaskEntity finishTask = tasks.stream().filter(t->t.getWorker().equals(FlowTask.FLOW_RESPONSE)).findFirst().orElse(null);
-        if(finishTask!=null && finishTask.getResponse()!=null){
+        if(finishTask!=null){
             flowCaseEntity.setResponse(finishTask.getResponse());
-            tasks.remove(finishTask);
+            //tasks.remove(finishTask);
         }
         flowCaseEntity.setFinished(Instant.now());
         flowCaseEntity.setState(FlowCase.FINISHED);
-        caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getResponse());
+        if(finishTask!=null && finishTask.getError()!=null){
+            flowCaseEntity.setState(FlowCase.ERROR);
+        }
+        caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getState(), flowCaseEntity.getResponse());
 
-        LOGGER.info("finish flow {}/{} {}", flowCaseEntity.getCaseType(), flowCaseEntity.getId(), flowCaseEntity.getResponse());
+        LOGGER.info("finish flow {}/{} {}", flowCaseEntity.getCaseType(), flowCaseEntity.getId(), flowCaseEntity.getState());
 
         //save to blob and clean db
         FlowCase flowCase = caseStore.loadFlowCaseById(flowCaseEntity.getId());

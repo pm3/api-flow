@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreType;
 public class TaskResponseException extends RuntimeException {
 
     public TaskResponseException(String message) {
-        super("response error "+message);
+        super(message);
     }
 
     public String getErrorType() {

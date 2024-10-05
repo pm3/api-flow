@@ -33,7 +33,7 @@ public class FlowThreadPool {
             flowExecutor.accept(caseId);
         }catch (Exception e){
             LOGGER.warn("flow {} execute error {}", caseId, e.getMessage());
-            LOGGER.debug("low {} execute stack", caseId, e);
+            LOGGER.warn("flow {} execute stack", caseId, e);
         }
         String lastTaskId = flowsMap.get(caseId);
         if(!Objects.equals(taskId, lastTaskId)){

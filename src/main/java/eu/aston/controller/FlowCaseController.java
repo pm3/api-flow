@@ -119,6 +119,7 @@ public class FlowCaseController {
         Callback callback = HeaderConverter.createCallback(request.getHeaders());
         FlowCaseCreate create = new FlowCaseCreate(caseType, externalId, assets, params, callback);
         String caseId = ID.newId();
+        LOGGER.info("start flow {} {}", caseType, caseId);
         flowCaseManager.createFlow(caseId, create);
         return new IdValue(caseId);
     }
@@ -134,6 +135,7 @@ public class FlowCaseController {
                 .orElseThrow(()->new UserException("invalid case type, case="+caseCreate.caseType()));
         flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
         String caseId = ID.newId();
+        LOGGER.info("start flow {} {}", caseCreate.caseType(), caseId);
         flowCaseManager.createFlow(caseId, caseCreate);
         return new IdValue(caseId);
     }
@@ -205,6 +207,9 @@ public class FlowCaseController {
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                                       .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
         flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
+
+        LOGGER.info("reprocess flow {} {}", flowCase.getCaseType(), id);
+
         FlowCase flowCase2 = loadFullFlow(flowCase);
         List<String> removeTasks = new ArrayList<>();
         if(flowCase2!=null && flowCase2.getTasks()!=null && !flowCase2.getTasks().isEmpty()){

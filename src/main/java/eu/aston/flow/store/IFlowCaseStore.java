@@ -19,10 +19,10 @@ public interface IFlowCaseStore {
            update flow_case
            set finished=current_timestamp,
            response=:response,
-           state='FINISHED'
+           state=:state
            where id=:id
            """)
-    void finishFlow(String id, @Format(JsonConverterFactory.JSON) Object response);
+    void finishFlow(String id, String state, @Format(JsonConverterFactory.JSON) Object response);
 
     @Query("""
            update flow_case

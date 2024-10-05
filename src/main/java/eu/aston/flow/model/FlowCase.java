@@ -15,6 +15,7 @@ public class FlowCase {
     public static final String STEP_STATE_PREF = "step-";
     public static final String FINISHED = "FINISHED";
     public static final String CREATED = "CREATED";
+    public static final String ERROR = "ERROR";
 
     private String id;
     private String caseType;
