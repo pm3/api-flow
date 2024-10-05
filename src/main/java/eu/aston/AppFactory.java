@@ -2,6 +2,7 @@ package eu.aston;
 
 import java.io.File;
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -29,6 +30,7 @@ public class AppFactory {
     public HttpClient httpClient(){
         return HttpClient.newBuilder()
                          .version(HttpClient.Version.HTTP_1_1)
+                         .connectTimeout(Duration.ofSeconds(6))
                          .build();
     }
 

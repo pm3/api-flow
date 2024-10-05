@@ -1,5 +1,6 @@
 package eu.aston.flow.store;
 
+import java.util.List;
 import java.util.Optional;
 
 import eu.aston.flow.model.FlowCase;
@@ -37,4 +38,7 @@ public interface IFlowCaseStore {
            where id=:id
            """)
     FlowCase loadFlowCaseById(String id);
+
+    @Query("select id from flow_case where finished is null")
+    List<String> selectIdForAllNotFinished();
 }

@@ -63,4 +63,20 @@ public interface IFlowTaskStore {
 
     @Query("delete from flow_task where flowCaseId=:flowCaseId")
     void deleteTasksByCaseId(String flowCaseId);
+
+    @Query("""
+           update flow_task
+           set started=null
+           where started is not null and finished is null
+           """)
+    void markResentNotFinishedTasks();
+
+    @Query("""
+        select id
+        from flow_task
+        where timeout is not null
+        and finished is null
+        and created + make_interval(secs => timeout) < current_timestamp
+        """)
+    List<String> selectExpired();
 }

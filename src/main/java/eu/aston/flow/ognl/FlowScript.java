@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 import ognl.Ognl;
 import ognl.OgnlException;
@@ -113,6 +116,13 @@ public class FlowScript {
             Object val = super.get(key);
             if(val instanceof RuntimeException ex) throw ex;
             return val;
+        }
+
+        @Override
+        public Set<Entry<String, Object>> entrySet() {
+            return super.entrySet().stream()
+                        .filter(e->!(e.getValue() instanceof Exception))
+                        .collect(Collectors.toSet());
         }
     }
 }

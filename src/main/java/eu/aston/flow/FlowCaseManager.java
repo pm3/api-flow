@@ -75,6 +75,22 @@ public class FlowCaseManager {
         return spanSender;
     }
 
+    public IFlowCaseStore getCaseStore() {
+        return caseStore;
+    }
+
+    public IFlowTaskStore getTaskStore() {
+        return taskStore;
+    }
+
+    public BlobStore getBlobStore() {
+        return blobStore;
+    }
+
+    public FlowThreadPool getFlowThreadPool() {
+        return flowThreadPool;
+    }
+
     public void createFlow(String id, FlowCaseCreate caseCreate) {
         Instant created = Instant.now();
         FlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
@@ -291,8 +307,8 @@ public class FlowCaseManager {
             flowCaseEntity.setState(FlowCase.ERROR);
         }
         caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getState(), flowCaseEntity.getResponse());
-
         LOGGER.info("finish flow {}/{} {}", flowCaseEntity.getCaseType(), flowCaseEntity.getId(), flowCaseEntity.getState());
+        spanSender.finishFlow(flowCaseEntity, flowDef, null);
 
         //save to blob and clean db
         FlowCase flowCase = caseStore.loadFlowCaseById(flowCaseEntity.getId());
@@ -301,7 +317,6 @@ public class FlowCaseManager {
         flowCase.setCallback(null);
         try{
             blobStore.saveFinalCase(flowCaseEntity.getCaseType(), flowCase.getId(), flowCase);
-            spanSender.finishFlow(flowCaseEntity, flowDef, null);
             taskStore.deleteTasksByCaseId(flowCaseEntity.getId());
         }catch (Exception e){
             LOGGER.warn("saveFinalCase {}", e.getMessage(), e);

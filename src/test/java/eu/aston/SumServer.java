@@ -143,7 +143,7 @@ public class SumServer implements HttpHandler {
         System.out.println("call worker");
         HttpRequest r = HttpRequest.newBuilder()
                 .GET()
-                .uri(new URI("http://localhost:8080/.queue/worker?path=/queue/sum&workerId=w1"))
+                .uri(new URI("http://localhost:8080/.queue/worker?path=/sum&workerId=w1"))
                 .header("X-Api-Key", "api-flow")
                 .build();
         HttpResponse<byte[]> resp = httpClient.send(r, HttpResponse.BodyHandlers.ofByteArray());
