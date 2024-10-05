@@ -9,6 +9,7 @@ import io.micronaut.core.annotation.Introspected;
 public record QueueStat(
         String prefix,
         int eventsCount,
+        int waitingEvents,
         Instant oldestEvent,
         Instant lastWorkerCall,
         int worker120,

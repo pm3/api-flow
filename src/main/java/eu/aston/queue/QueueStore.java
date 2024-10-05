@@ -121,6 +121,7 @@ public class QueueStore {
                 workerGroupAddEvents(workerGroup, new ArrayList<>(eventMap.values().stream().filter(e->e.getPath().startsWith(prefix)).toList()));
             }
         }
+        workerGroup.eventCounter.incrementAndGet();
         workerGroup.lastWorker = System.currentTimeMillis();
         workerGroup.lastWorkerPing.put(worker.getId(), System.currentTimeMillis());
         QueueEvent event = null;
@@ -202,6 +203,7 @@ public class QueueStore {
         Long oldestEvent = Optional.ofNullable(wg.events.peek()).map(eventMap::get).map(QueueEvent::getT1).orElse(null);
         return new QueueStat(
                 wg.prefix,
+                wg.eventCounter.get(),
                 wg.events.size(),
                 oldestEvent!=null ? Instant.ofEpochMilli(oldestEvent) : null,
                 Instant.ofEpochMilli(wg.lastWorker),
