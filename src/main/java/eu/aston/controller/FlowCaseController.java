@@ -1,12 +1,9 @@
 package eu.aston.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
@@ -15,11 +12,9 @@ import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.WaitingFlowCaseManager;
 import eu.aston.flow.def.FlowDef;
-import eu.aston.flow.model.ClearCase;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;
-import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.model.IdValue;
 import eu.aston.flow.store.IFlowTaskStore;
 import eu.aston.header.Callback;
@@ -196,66 +191,6 @@ public class FlowCaseController {
             }
         }
         return flowCase;
-    }
-
-    @Operation(tags = {"case"})
-    @Post("/case/{id}/reprocess")
-    public List<String> reprocess(@PathVariable String id,
-                          @Body ClearCase clearCase,
-                          @Parameter(hidden = true) UserContext userContext) {
-        FlowCase flowCase = flowCaseManager.loadFlow(id);
-        FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
-                                      .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
-
-        LOGGER.info("reprocess flow {} {}", flowCase.getCaseType(), id);
-
-        FlowCase flowCase2 = loadFullFlow(flowCase);
-        List<String> removeTasks = new ArrayList<>();
-        if(flowCase2!=null && flowCase2.getTasks()!=null && !flowCase2.getTasks().isEmpty()){
-            List<int[]> codeRanges = codeRanges(clearCase.responseCodes());
-            removeTasks = flowCase2.getTasks().stream()
-                                                .filter(t->filterClean(t,clearCase, codeRanges))
-                                                .map(FlowTask::getId)
-                                                .toList();
-            flowCaseManager.reprocess(flowCase2.getId(), removeTasks);
-        }
-        return removeTasks;
-    }
-
-    private boolean filterClean(FlowTask t, ClearCase clearCase, List<int[]> codeRanges) {
-        if(clearCase.steps()!=null && clearCase.steps().contains(t.getStep())) return true;
-        if(clearCase.workers()!=null && (
-                clearCase.workers().contains(t.getWorker())
-                        || clearCase.workers().contains(t.getStep()+"."+t.getWorker())
-        )) return true;
-        if(clearCase.tasks()!=null && clearCase.tasks().contains(t.getId())) return true;
-        if(codeRanges!=null && t.getResponseCode()>0){
-            for(int[] r : codeRanges){
-                if(r[0]<=t.getResponseCode() && r[1]>=t.getResponseCode()) return true;
-            }
-        }
-        return false;
-    }
-
-    private List<int[]> codeRanges(List<String> ranges){
-        if(ranges==null || ranges.isEmpty()) return null;
-        List<int[]> codeRanges = new ArrayList<>();
-        Pattern p = Pattern.compile("^([0-9]+)$|^([0-9]*)-([0-9]*)$");
-        for (String s : ranges) {
-            Matcher m = p.matcher(s);
-            if(m.matches()){
-                if(m.group(1)!=null){
-                    int v = Integer.parseInt(m.group(1));
-                    codeRanges.add(new int[]{v,v});
-                } else {
-                    int v0 = m.group(2).isEmpty() ? 0 : Integer.parseInt(m.group(2));
-                    int v1 = m.group(3).isEmpty() ? 1000 : Integer.parseInt(m.group(3));
-                    codeRanges.add(new int[]{v0,v1});
-                }
-            }
-        }
-        return !codeRanges.isEmpty() ? codeRanges : null;
     }
 
     @Operation(tags = {"case"})

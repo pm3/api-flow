@@ -66,4 +66,7 @@ public interface IFlowTaskStore {
 
     @Query("delete from flow_task where finished is null")
     void removeNotFinished();
+
+    @Query("delete from flow_task where id=:id")
+    void removeTask(String id);
 }
