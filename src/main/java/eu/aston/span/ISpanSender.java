@@ -11,9 +11,5 @@ public interface ISpanSender {
 
     void finishFlow(FlowCaseEntity flowCase, FlowDef flowDef, String error);
 
-    void finishWaitingTask(FlowCaseEntity flowCase, FlowTaskEntity task, String error);
-
-    void finishRunningTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowWorkerDef workerDef, int statusCode, String error);
-
     void finishTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowWorkerDef workerDef);
 }

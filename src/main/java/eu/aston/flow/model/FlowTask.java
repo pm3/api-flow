@@ -24,7 +24,6 @@ public class FlowTask {
     private String error;
 
     private Instant created;
-    private Instant started;
     private Instant finished;
 
     public String getId() {
@@ -89,14 +88,6 @@ public class FlowTask {
 
     public void setCreated(Instant created) {
         this.created = created;
-    }
-
-    public Instant getStarted() {
-        return started;
-    }
-
-    public void setStarted(Instant started) {
-        this.started = started;
     }
 
     public Instant getFinished() {

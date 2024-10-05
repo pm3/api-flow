@@ -21,7 +21,6 @@ public class FlowTaskEntity {
 
     private Integer timeout;
     private Instant created;
-    private Instant started;
     private Instant finished;
     private Instant queueSent;
 
@@ -34,7 +33,6 @@ public class FlowTaskEntity {
         this.step = step;
         this.worker = worker;
         this.stepIndex = stepIndex;
-        this.created = Instant.now();
     }
 
     public String getId() {
@@ -115,14 +113,6 @@ public class FlowTaskEntity {
 
     public void setCreated(Instant created) {
         this.created = created;
-    }
-
-    public Instant getStarted() {
-        return started;
-    }
-
-    public void setStarted(Instant started) {
-        this.started = started;
     }
 
     public Instant getFinished() {

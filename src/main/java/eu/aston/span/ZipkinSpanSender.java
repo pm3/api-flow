@@ -142,50 +142,24 @@ public class ZipkinSpanSender implements ISpanSender {
         cacheAdd(span);
     }
 
-    @Override
-    public void finishWaitingTask(FlowCaseEntity flowCase, FlowTaskEntity task, String error) {
-        if(task.getStarted()==null) return;
+    public void finishWaitingTask(FlowCaseEntity flowCase, FlowTaskEntity task) {
         ZipkinSpan span = new ZipkinSpan();
+        span.setDuration(Duration.between(task.getCreated(), task.getQueueSent()).toMillis()*1000);
+        if(span.getDuration()<10_000) return;
         span.setTraceId(flowCase.getId());
         span.setName("task-waiting");
         span.setId(task.getId().substring(0,15)+"1");
         span.setParentId(task.getId().substring(0,15)+"0");
         span.setTimestamp(task.getCreated().toEpochMilli()*1000);
-        span.setDuration(Duration.between(task.getCreated(), task.getStarted()).toMillis()*1000);
-        if(span.getDuration()<2000) return;
         span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getStep()+"/"+task.getWorker()));
-        if(error!=null){
-            span.setTags(new HashMap<>());
-            span.getTags().put("error", error);
-            span.setName(span.getName()+" error");
-        }
-        cacheAdd(span);
-    }
-
-    @Override
-    public void finishRunningTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowWorkerDef workerDef, int statusCode, String error) {
-        if(task.getStarted()==null) return;
-        ZipkinSpan span = new ZipkinSpan();
-        span.setTraceId(flowCase.getId());
-        span.setName("task-running");
-        span.setId(task.getId().substring(0,15)+"2");
-        span.setParentId(task.getId().substring(0,15)+"0");
-        span.setTimestamp(task.getStarted().toEpochMilli()*1000);
-        span.setDuration(Duration.between(task.getStarted(), task.getFinished()).toMillis()*1000);
-        span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getStep()+"/"+task.getWorker()));
-        span.setTags(new HashMap<>());
-        if(error!=null){
-            span.getTags().put("error", error);
-            span.setName(span.getName()+" error");
-        }
-        span.getTags().put("http.method", workerDef.getMethod());
-        span.getTags().put("http.path", workerDef.getPath()!=null? workerDef.getPath() : workerDef.getPathExpr());
-        span.getTags().put("http.status_code", task.getError()!=null ? "400":"200");
         cacheAdd(span);
     }
 
     @Override
     public void finishTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowWorkerDef workerDef) {
+        if(task.getQueueSent()!=null){
+            finishWaitingTask(flowCase, task);
+        }
         ZipkinSpan span = new ZipkinSpan();
         span.setTraceId(flowCase.getId());
         span.setName("task");
@@ -203,6 +177,13 @@ public class ZipkinSpanSender implements ISpanSender {
         if(workerDef.getLabels()!=null){
             workerDef.getLabels().forEach((k,v)->span.getTags().put("worker."+k, v));
         }
+        if(task.getError()!=null){
+            span.getTags().put("error", task.getError());
+            span.setName(span.getName()+" error");
+        }
+        span.getTags().put("http.method", workerDef.getMethod());
+        span.getTags().put("http.path", workerDef.getPath()!=null? workerDef.getPath() : workerDef.getPathExpr());
+        span.getTags().put("http.status_code", String.valueOf(task.getResponseCode()));
         cacheAdd(span);
     }
 }

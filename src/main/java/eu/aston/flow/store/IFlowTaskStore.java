@@ -19,7 +19,6 @@ public interface IFlowTaskStore {
     @Query("""
            update flow_task set
            finished=current_timestamp,
-           started=COALESCE(started, current_timestamp),
            responseCode=:responseCode,
            response=:response,
            error=null
@@ -30,20 +29,12 @@ public interface IFlowTaskStore {
     @Query("""
            update flow_task set
            finished=current_timestamp,
-           started=COALESCE(started, current_timestamp),
            responseCode=:responseCode,
            response=null,
            error=:error
            where id=:id
            """)
     void finishError(String id, int responseCode, String error);
-
-    @Query("""
-           update flow_task set
-           started=current_timestamp
-           where id=:id and started is null
-           """)
-    int startRunning(String id);
 
     @Query("""
            update flow_task set
@@ -65,13 +56,6 @@ public interface IFlowTaskStore {
     void deleteTasksByCaseId(String flowCaseId);
 
     @Query("""
-           update flow_task
-           set started=null
-           where started is not null and finished is null
-           """)
-    void markResentNotFinishedTasks();
-
-    @Query("""
         select id
         from flow_task
         where timeout is not null
@@ -79,4 +63,7 @@ public interface IFlowTaskStore {
         and created + make_interval(secs => timeout) < current_timestamp
         """)
     List<String> selectExpired();
+
+    @Query("delete from flow_task where finished is null")
+    void removeNotFinished();
 }

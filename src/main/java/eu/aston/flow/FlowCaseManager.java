@@ -3,6 +3,7 @@ package eu.aston.flow;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -150,7 +151,6 @@ public class FlowCaseManager {
             throw new UserException("task is finished "+ task.getId());
         }
         task.setFinished(Instant.now());
-        if(task.getStarted()==null) task.setStarted(task.getFinished());
 
         String error = null;
         if(statusCode >=200 && statusCode <=202){
@@ -161,7 +161,6 @@ public class FlowCaseManager {
         }
 
         FlowWorkerDef workerDef = flowDefStore.cacheWorker(flowDef, task.getStep(), task.getWorker());
-        spanSender.finishRunningTask(flowCase, task, workerDef, statusCode, error);
         spanSender.finishTask(flowCase, task, workerDef);
         flowThreadPool.addCase(task.getFlowCaseId(), task.getId());
     }
@@ -181,13 +180,18 @@ public class FlowCaseManager {
             executor.execTick(flowDef, flowCase, tasks, aktStepCode, new IFlowExecutor.IFlowBack() {
                 @Override
                 public void sentTask(FlowTaskEntity task) {
-                    taskStore.startRunning(task.getId());
-                    task.setStarted(Instant.now());
-                    spanSender.finishWaitingTask(flowCase, task, null);
+                    if(task.getCreated()==null){
+                        task.setCreated(Instant.now());
+                        taskStore.insert(task);
+                    }
                 }
 
                 @Override
                 public void finishTask(FlowTaskEntity task, int statusCode, Object response) {
+                    if(task.getCreated()==null){
+                        task.setCreated(Instant.now());
+                        taskStore.insert(task);
+                    }
                     finishTask0(flowDef, flowCase, task, statusCode, response);
                 }
             });
@@ -200,50 +204,53 @@ public class FlowCaseManager {
         FlowStepDef aktStep = aktState!=null ? flowDef.getSteps().stream().filter(s-> Objects.equals(s.getCode(), aktState)).findFirst().orElse(null) : null;
 
         if(aktStep!=null) {
-            int notStarted = 0;
-            int notFinished = 0;
+            int maxIndex = 1;
+            boolean notStarted = false;
+            boolean notFinished = false;
+            Map<String, String> existMap = new HashMap<>();
+            FlowTaskEntity iterator = null;
             String step = aktStep.getCode();
             for(FlowTaskEntity t : tasks){
                 if(Objects.equals(step, t.getStep())){
-                    if(t.getStarted() == null) notStarted++;
-                    if(t.getFinished() == null) notFinished++;
+                    if(t.getFinished() == null) notFinished=true;
+                    existMap.put(t.getWorker()+":"+t.getStepIndex(), t.getId());
+                    if(t.getWorker().equals(FlowTask.STEP_ITERATOR)){
+                        iterator = t;
+                    }
                 }
             }
-            if (notStarted>0) {
+            if(iterator!=null){
+                if(iterator.getFinished()==null){
+                    //stale cakam na iterator
+                    return null;
+                }
+                if(iterator.getResponse() instanceof List<?> items && !items.isEmpty()){
+                    //iterator v poriadku
+                    maxIndex = items.size();
+                } else {
+                    //chyba v iteratore, idem na dalsi krok
+                    maxIndex = -1;
+                    notFinished = false;
+                }
+            }
+            for(int i=0; i<maxIndex; i++){
+                for(FlowWorkerDef worker : aktStep.getWorkers()){
+                    if(!existMap.containsKey(worker.getCode()+":"+i)){
+                        tasks.add(createTask(flowCase.getId(), aktStep, worker, i));
+                        notStarted = true;
+                    }
+                }
+            }
+            if (notStarted) {
                 //mam rozpracovany step, pokracujem v spracovani
                 return aktStep.getCode();
             }
-            if(notFinished>0) {
+            if(notFinished) {
                 //este nie su vsetky hotovo, cakam na dalsi tick
                 return null;
             }
-
-            List<FlowTaskEntity> stepAllTasks = tasks
-                    .stream()
-                    .filter(t -> Objects.equals(step, t.getStep()))
-                    .toList();
-            if (stepAllTasks.size() == 1 && stepAllTasks.getFirst().getWorker().equals(FlowTask.STEP_ITERATOR)) {
-                FlowTaskEntity task1 = stepAllTasks.getFirst();
-                if (task1.getFinished() != null) {
-                    //mame hotovy iterator, treba vytvorit tasky
-                    int size = 0;
-                    if (task1.getResponse() instanceof List<?> l) size = l.size();
-                    if(size>0){
-                        for (int i = 0; i < size; i++) {
-                            tasks.addAll(createTasks(aktStep, flowCase.getId(), i));
-                        }
-                        return aktStep.getCode();
-                    } else {
-                        LOGGER.info("step with empty iterator {}/{}", flowCase.getId(), step);
-                        //pokracujem dalej, takze pojdem na next
-                    }
-                } else {
-                    //stale cakame na iterator, je startnuty ale nie je odpoved
-                    return null;
-                }
-            }
-            //nemam rozpracovane tasky, idem na dalsi step
         }
+        //nemam rozpracovane tasky, idem na dalsi step
         FlowStepDef next = nextStep(flowCase, flowDef);
         if(next!=null){
             LOGGER.info("next step {} {}", flowCase.getId(), next.getCode());
@@ -253,12 +260,14 @@ public class FlowCaseManager {
                 //spustam iterator
                 FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), flowCase.getId(), next.getCode(), FlowTask.STEP_ITERATOR, -1);
                 taskEntity.setTimeout(flowDefStore.getDefaultTimeout());
-                taskStore.insert(taskEntity);
                 tasks.add(taskEntity);
                 return next.getCode();
             }
             //vytvaram tasky v novom stepe bez iteratora
-            tasks.addAll(createTasks(next, flowCase.getId(), 0));
+            for (FlowWorkerDef worker : next.getWorkers()){
+                tasks.add(createTask(flowCase.getId(), next, worker, 0));
+            }
+
             //co ak ziadne nevytvoril?
             return next.getCode();
         }
@@ -267,15 +276,10 @@ public class FlowCaseManager {
         return null;
     }
 
-    private List<FlowTaskEntity> createTasks(FlowStepDef step, String caseId, int stepIndex) {
-        List<FlowTaskEntity> tasks = new ArrayList<>();
-        for (FlowWorkerDef worker : step.getWorkers()){
-            FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), caseId, step.getCode(), worker.getCode(), stepIndex);
-            taskEntity.setTimeout(worker.getTimeout()!=null ? worker.getTimeout() : flowDefStore.getDefaultTimeout());
-            taskStore.insert(taskEntity);
-            tasks.add(taskEntity);
-        }
-        return tasks;
+    private FlowTaskEntity createTask(String caseId, FlowStepDef step, FlowWorkerDef worker, int stepIndex){
+        FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), caseId, step.getCode(), worker.getCode(), stepIndex);
+        taskEntity.setTimeout(worker.getTimeout()!=null ? worker.getTimeout() : flowDefStore.getDefaultTimeout());
+        return taskEntity;
     }
 
     private FlowStepDef nextStep(FlowCaseEntity flowCase, FlowDef flowDef) {

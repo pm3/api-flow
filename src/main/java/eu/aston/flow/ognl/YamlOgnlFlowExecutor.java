@@ -87,7 +87,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         }
 
         Map<Integer, List<FlowTaskEntity>> openedTasks = tasks.stream()
-                .filter(t->t.getFinished()==null && t.getStarted()==null)
+                .filter(t->t.getFinished()==null && t.getCreated()==null)
                 .collect(Collectors.groupingBy(FlowTaskEntity::getStepIndex));
 
         openedTasks.forEach((stepIndex, openTasks)->execTickStep(stepCode, stepIndex, flowDef, flowCase, openTasks, steps, flowBack));
@@ -187,12 +187,6 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             }
         }
 
-        if(path.equals(FlowTask.ECHO)){
-            flowBack.finishTask(task, 200, params);
-            return;
-        }
-
-        task.setStarted(Instant.now());
         sendTaskHttp(task, flowDef, workerDef.getMethod(), path, headers, params, workerDef.isBlocked(), flowBack);
     }
 
@@ -207,6 +201,14 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
                 throw e;
             }
         }
+
+        flowBack.sentTask(task);
+
+        if(path.equals(FlowTask.ECHO)){
+            flowBack.finishTask(task, 200, params);
+            return;
+        }
+
         if(flowBridge.sendQueueEvent(task, method, path, headers, data, flowBack)){
             return;
         }

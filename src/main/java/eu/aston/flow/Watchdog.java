@@ -22,12 +22,13 @@ public class Watchdog {
     }
 
     private void fixKilled() {
-        flowCaseManager.getTaskStore().markResentNotFinishedTasks();
+        flowCaseManager.getTaskStore().removeNotFinished();
         List<String> notFinishedCases = flowCaseManager.getCaseStore().selectIdForAllNotFinished();
         for(String id : notFinishedCases){
             LOGGER.info("restart flow case {}", id);
             flowCaseManager.getFlowThreadPool().addCase(id, id);
         }
+        watchdogTimeoutTasks();
     }
 
     private void watchdogTimeoutTasks() {
