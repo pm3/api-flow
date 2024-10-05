@@ -25,30 +25,24 @@ public class MetricsController {
         if(host==null) host = "dev";
         StringBuilder sb = new StringBuilder();
         for(QueueStat stat : stats){
-
-            sb.append("api_flow_worker_event_count");
-            labels(sb,"prefix", stat.prefix(), "host", host);
-            sb.append(' ').append(stat.eventsCount()).append("\n");
-
-            sb.append("api_flow_worker_waiting_events");
-            labels(sb,"prefix", stat.prefix(), "host", host);
-            sb.append(' ').append(stat.waitingEvents()).append("\n");
-
-            sb.append("api_flow_worker120");
-            labels(sb,"prefix", stat.prefix(), "host", host);
-            sb.append(' ').append(stat.worker120()).append('\n');
+            String labels = labels("prefix", stat.prefix(), "host", host);
+            sb.append("api_flow_worker_event_count").append(labels).append(' ').append(stat.eventsCount()).append("\n");
+            sb.append("api_flow_worker_waiting_events").append(labels).append(' ').append(stat.waitingEvents()).append("\n");
+            sb.append("api_flow_worker120").append(labels).append(' ').append(stat.worker120()).append('\n');
             sb.append('\n');
         }
         return sb.toString();
     }
 
-    private void labels(StringBuilder sb, String... labels) {
+    private String labels(String... labels) {
+        StringBuilder sb = new StringBuilder();
         sb.append('{');
         for(int i=0; i<labels.length; i+=2){
             if(i>0) sb.append(',');
             sb.append(labels[i]).append('=').append('"').append(labels[i+1]).append('"');
         }
         sb.append('}');
+        return sb.toString();
     }
 
 }
