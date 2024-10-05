@@ -219,6 +219,13 @@ public class FlowCaseManager {
                     }
                 }
             }
+            if(aktStep.getItemsExpr()!=null && iterator==null){
+                //vytvaram iterator
+                FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), flowCase.getId(), aktStep.getCode(), FlowTask.STEP_ITERATOR, -1);
+                taskEntity.setTimeout(flowDefStore.getDefaultTimeout());
+                tasks.add(taskEntity);
+                return aktStep.getCode();
+            }
             if(iterator!=null){
                 if(iterator.getFinished()==null){
                     //stale cakam na iterator
@@ -255,21 +262,9 @@ public class FlowCaseManager {
         if(next!=null){
             LOGGER.info("next step {} {}", flowCase.getId(), next.getCode());
             //spustam novy step
-            caseStore.updateFlowState(flowCase.getId(), FlowCase.STEP_STATE_PREF+next.getCode());
-            if(next.getItemsExpr()!=null){
-                //spustam iterator
-                FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), flowCase.getId(), next.getCode(), FlowTask.STEP_ITERATOR, -1);
-                taskEntity.setTimeout(flowDefStore.getDefaultTimeout());
-                tasks.add(taskEntity);
-                return next.getCode();
-            }
-            //vytvaram tasky v novom stepe bez iteratora
-            for (FlowWorkerDef worker : next.getWorkers()){
-                tasks.add(createTask(flowCase.getId(), next, worker, 0));
-            }
-
-            //co ak ziadne nevytvoril?
-            return next.getCode();
+            flowCase.setState(FlowCase.STEP_STATE_PREF+next.getCode());
+            caseStore.updateFlowState(flowCase.getId(), flowCase.getState());
+            return openTasks(flowDef, flowCase, tasks);
         }
         //uz nemam next, koncim
         finishFlow(flowCase, flowDef, tasks);
@@ -348,6 +343,30 @@ public class FlowCaseManager {
         return state.startsWith(FlowCase.STEP_STATE_PREF) ? state.substring(FlowCase.STEP_STATE_PREF.length()) : null;
     }
 
-    public void reprocess(String caseId, List<String> removeTasks) {
+    public void reprocess(String newCaseId, FlowCase flowCase2, List<FlowTask> tasks2) {
+        FlowCaseEntity flowCase = new FlowCaseEntity();
+        flowCase.setId(newCaseId);
+        flowCase.setCaseType(flowCase2.getCaseType());
+        flowCase.setExternalId(flowCase2.getExternalId());
+        flowCase.setCallback(flowCase2.getCallback());
+        flowCase.setParams(flowCase2.getParams());
+        flowCase.setAssets(flowCase2.getAssets());
+        flowCase.setCreated(Instant.now());
+        flowCase.setState(FlowCase.CREATED);
+        caseStore.insert(flowCase);
+        for(FlowTask task2 : tasks2) {
+            FlowTaskEntity task = new FlowTaskEntity();
+            task.setId(ID.newId());
+            task.setFlowCaseId(newCaseId);
+            task.setStep(task2.getStep());
+            task.setWorker(task2.getWorker());
+            task.setResponseCode(task2.getResponseCode());
+            task.setResponse(task2.getResponse());
+            task.setError(task2.getError());
+            task.setCreated(flowCase.getCreated());
+            task.setFinished(flowCase.getCreated());
+            taskStore.insert(task);
+        }
+        flowThreadPool.addCase(newCaseId,newCaseId);
     }
 }
