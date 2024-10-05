@@ -5,17 +5,14 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
-import eu.aston.flow.WaitingFlowCaseManager;
 import eu.aston.flow.def.FlowDef;
 import eu.aston.flow.model.ClearCase;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.model.IdValue;
-import eu.aston.flow.store.IFlowTaskStore;
 import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
 import eu.aston.utils.ID;

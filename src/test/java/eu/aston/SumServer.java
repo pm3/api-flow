@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -107,8 +108,13 @@ public class SumServer implements HttpHandler {
         }
         resp.put("c", sum);
         byte[] respBody = objectMapper.writeValueAsBytes(resp);
+        try{
+            Thread.sleep(20_000+random.nextLong(200, 1000));
+        }catch (Exception e){}
         return respBody;
     }
+
+    private Random random = new Random();
 
     private void sendCallback(String callback, Map<String, String> headers, byte[] respBody) {
         try{

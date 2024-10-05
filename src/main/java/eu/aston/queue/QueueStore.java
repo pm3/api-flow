@@ -56,13 +56,13 @@ public class QueueStore {
         LOGGER.debug("addEvent {} {} => workerGroup {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
         eventMap.put(event.getId(), event);
         if (workerGroup != null) {
-            LOGGER.debug("event without worker {} {}", event.getPath(), event.getId());
             boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
             if (!sent) {
                 LOGGER.debug("waiting in queue {}", event.getId());
                 workerGroup.events.add(event.getId());
             }
         } else {
+            LOGGER.debug("event without worker {} {}", event.getPath(), event.getId());
             superTimer.schedule(120 * 1000L, event.getId(), this::response503);
         }
     }

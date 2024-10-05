@@ -29,6 +29,7 @@ steps:
         params:
           $a: step.local.w11.a
           b: "2"
+        timeout: 10
 
       - code: w22
         path: "http://localhost:8081/sum"
@@ -37,6 +38,7 @@ steps:
         params:
           $a: w21.c
           b: "3"
+        timeout: 10
 
   - code: queue
     workers:

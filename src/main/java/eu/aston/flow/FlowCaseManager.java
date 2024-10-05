@@ -28,6 +28,7 @@ import eu.aston.span.ISpanSender;
 import eu.aston.user.UserException;
 import eu.aston.utils.FlowThreadPool;
 import eu.aston.utils.ID;
+import eu.aston.utils.SuperTimer;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.MediaType;
 import jakarta.inject.Singleton;
@@ -48,6 +49,7 @@ public class FlowCaseManager {
     private final ISpanSender spanSender;
     private final FlowThreadPool flowThreadPool;
     private final CallbackRunner callbackRunner;
+    private final SuperTimer superTimer;
 
     public FlowCaseManager(BlobStore blobStore,
                            IFlowCaseStore caseStore,
@@ -56,7 +58,8 @@ public class FlowCaseManager {
                            IFlowExecutor[] executors,
                            WaitingFlowCaseManager waitingFlowCaseManager,
                            ISpanSender spanSender,
-                           CallbackRunner callbackRunner) {
+                           CallbackRunner callbackRunner,
+                           SuperTimer superTimer) {
         this.blobStore = blobStore;
         this.caseStore = caseStore;
         this.taskStore = taskStore;
@@ -65,6 +68,7 @@ public class FlowCaseManager {
         this.waitingFlowCaseManager = waitingFlowCaseManager;
         this.spanSender = spanSender;
         this.callbackRunner = callbackRunner;
+        this.superTimer = superTimer;
         this.flowThreadPool = new FlowThreadPool(4, this::nextTick);
     }
 
@@ -135,6 +139,9 @@ public class FlowCaseManager {
     public void finishTask(String taskId, int statusCode, Object response) {
         FlowTaskEntity taskEntity = taskStore.loadById(taskId)
                                              .orElseThrow(()->new UserException("undefined taskId "+taskId));
+        if(taskEntity.getFinished()!=null){
+            throw new UserException("task is finished "+ taskEntity.getId());
+        }
         FlowCaseEntity flowCase = caseStore.loadById(taskEntity.getFlowCaseId())
                                            .orElseThrow(()->new UserException("undefined flowId "+taskEntity.getFlowCaseId()));
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
@@ -144,25 +151,35 @@ public class FlowCaseManager {
     }
 
     private void finishTask0(FlowDef flowDef, FlowCaseEntity flowCase, FlowTaskEntity task, int statusCode, Object response) {
-
-        LOGGER.info("finishTask {}/{} - {} - status {}", flowCase.getCaseType(), flowCase.getId(), task.getId(), statusCode);
-
         if(task.getFinished()!=null){
             throw new UserException("task is finished "+ task.getId());
         }
+
+        LOGGER.info("finishTask {}/{} - {} - status {}", flowCase.getCaseType(), flowCase.getId(), task.getId(), statusCode);
+
         task.setFinished(Instant.now());
+        task.setResponseCode(statusCode);
 
         String error = null;
         if(statusCode >=200 && statusCode <=202){
             taskStore.finishOk(task.getId(), statusCode, response);
+            task.setResponse(response);
         } else {
             error = response !=null ? response.toString() : "";
             taskStore.finishError(task.getId(), statusCode, error);
+            task.setError(error);
         }
 
         FlowWorkerDef workerDef = flowDefStore.cacheWorker(flowDef, task.getStep(), task.getWorker());
         spanSender.finishTask(flowCase, task, workerDef);
         flowThreadPool.addCase(task.getFlowCaseId(), task.getId());
+    }
+
+    public void taskTimeout(String taskId) {
+        try{
+            finishTask(taskId, 408, "timeout");
+        }catch (UserException ignore){
+        }
     }
 
     private void nextTick(String flowCaseId) {
@@ -183,6 +200,9 @@ public class FlowCaseManager {
                     if(task.getCreated()==null){
                         task.setCreated(Instant.now());
                         taskStore.insert(task);
+                        if(task.getTimeout()!=null){
+                            superTimer.schedule(task.getTimeout()*1000L, task.getId(), FlowCaseManager.this::taskTimeout);
+                        }
                     }
                 }
 

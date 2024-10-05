@@ -133,7 +133,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             }catch (WaitingException e){
                 return;
             }catch (TaskResponseException e){
-                flowBack.finishTask(task, 400, "TaskResponseException "+e.getMessage());
+                flowBack.finishTask(task, 400, e.getMessage());
                 return;
             }catch (OgnlException e){
                 LOGGER.warn("ignore task {} where {}, exec exception {}", task, workerDef.getWhere(), e.getMessage());
@@ -256,7 +256,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             flowBack.finishTask(task, resp.statusCode(), new String(resp.body(), StandardCharsets.UTF_8));
         }
         if(e!=null){
-            flowBack.finishTask(task, 500, e.getMessage());
+            flowBack.finishTask(task, 500, "httpClient "+e.getMessage());
         }
     }
 
@@ -266,7 +266,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             flowBack.finishTask(task, resp.statusCode(), new String(resp.body(), StandardCharsets.UTF_8));
         }
         if(e!=null){
-            flowBack.finishTask(task, 500, e.getMessage());
+            flowBack.finishTask(task, 500, "httpClient "+e.getMessage());
         }
     }
 
@@ -276,7 +276,7 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         if(t.getFinished()==null){
             resp = new WaitingException(t.getWorker());
         } else if (t.getError()!=null){
-            resp = new TaskResponseException("error "+t.getResponseCode()+" "+t.getWorker());
+            resp = new TaskResponseException("error "+t.getWorker()+" "+t.getResponseCode());
         }
         if(index<0){
             stepMap.put(t.getWorker(), resp);
