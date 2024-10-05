@@ -2,10 +2,12 @@ package eu.aston.queue;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,6 +122,7 @@ public class QueueStore {
             }
         }
         workerGroup.lastWorker = System.currentTimeMillis();
+        workerGroup.lastWorkerPing.put(worker.getId(), System.currentTimeMillis());
         QueueEvent event = null;
         while(!workerGroup.events.isEmpty() && event==null) {
             String eventId = workerGroup.events.poll();
@@ -182,6 +185,29 @@ public class QueueStore {
                 }
             }
         }
+    }
+
+    public List<QueueStat> stats() {
+        Instant now = Instant.now();
+        List<WorkerGroup> groups = new ArrayList<>(workerTree.values());
+        return groups.stream().map(wg->createStat(wg, now)).toList();
+    }
+
+    private QueueStat createStat(WorkerGroup wg, Instant now) {
+        List<Map.Entry<String, Long>> entries = new ArrayList<>(wg.lastWorkerPing.entrySet());
+        long expired = System.currentTimeMillis()-120_000;
+        for(Map.Entry<String, Long> e: entries){
+            if(e.getValue()<expired) wg.lastWorkerPing.remove(e.getKey(), e.getValue());
+        }
+        Long oldestEvent = Optional.ofNullable(wg.events.peek()).map(eventMap::get).map(QueueEvent::getT1).orElse(null);
+        return new QueueStat(
+                wg.prefix,
+                wg.events.size(),
+                oldestEvent!=null ? Instant.ofEpochMilli(oldestEvent) : null,
+                Instant.ofEpochMilli(wg.lastWorker),
+                wg.lastWorkerPing.size(),
+                new ArrayList<>(wg.lastWorkerPing.keySet())
+        );
     }
 
 }
