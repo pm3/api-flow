@@ -182,3 +182,15 @@ steps:
           $a: case.params.a # expression
 
 This documentation provides an overview of the data objects and their attributes that form the basis for processing flows in the API-Flow application.
+
+---
+
+## Using Expressions
+
+OGNL expressions are used for data manipulation. Expressions can be applied in workers on the `$path`, `where`, `headers`, and `params` items.
+
+For `headers` and `params`, these are maps. If the name of the parameter starts with the `$` symbol, its value is treated as an expression. Otherwise, it is a static property.
+
+If there is only one property in the map named `$`, the output is not a map but rather the value evaluated from the expression parameter value.
+
+
