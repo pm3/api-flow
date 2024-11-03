@@ -52,3 +52,133 @@ API-Flow supports multiple types of worker calls:
 3. **Asynchronous Call via Queue**: In this type, the request is stored in a queue, from which a sidecar process retrieves it and calls the target web service. The sidecar then sends the result back to the flow via a callback.
 
 API-Flow thus offers a robust approach to managing asynchronous processes, enabling parallel execution, and monitoring the state of individual tasks within a microservices architecture.
+
+# Flow Configuration Documentation
+
+This documentation describes the data objects used in API-Flow, including their attributes and purposes.
+
+## 1. `FlowDef`
+
+The `FlowDef` class defines the main flow object, which contains basic information about the flow and its steps.
+
+### Attributes
+
+- **`code`**: 
+  - Type: `String`
+  - Description: Unique identifier for the flow.
+
+- **`auth`**: 
+  - Type: `String`
+  - Description: Authentication information used when executing the flow.
+
+- **`steps`**: 
+  - Type: `List<FlowStepDef>`
+  - Description: A list of steps (`FlowStepDef`) that define the individual parts of the flow.
+
+- **`labels`**: 
+  - Type: `Map<String, String>`
+  - Description: A map with additional information or metadata about the flow.
+
+- **`response`**: 
+  - Type: `Map<String, Object>`
+  - Description: A map that contains expressions for obtaining responses from the workers.
+
+---
+
+## 2. `FlowStepDef`
+
+The `FlowStepDef` class defines the individual steps within the flow. Each step may contain workers that perform HTTP requests.
+
+### Attributes
+
+- **`code`**: 
+  - Type: `String`
+  - Description: Unique identifier for the step.
+
+- **`itemsExpr`**: 
+  - Type: `String`
+  - Description: An expression that generates a list of items for this step (e.g., an iterator).
+
+- **`workers`**: 
+  - Type: `List<FlowWorkerDef>`
+  - Description: A list of workers (`FlowWorkerDef`) that are part of this step.
+
+---
+
+## 3. `FlowWorkerDef`
+
+The `FlowWorkerDef` class defines a worker that executes a specific HTTP request within the flow step.
+
+### Attributes
+
+- **`code`**: 
+  - Type: `String`
+  - Description: Unique identifier for the worker.
+
+- **`path`**: 
+  - Type: `String`
+  - Description: The path to which the worker attempts to make an HTTP request.
+
+- **`pathExpr`**: 
+  - Type: `String`
+  - Description: An expression that defines a dynamic path for the HTTP request.
+
+- **`method`**: 
+  - Type: `String`
+  - Description: The type of HTTP method (e.g., `GET`, `POST`, etc.) used in the request.
+
+- **`headers`**: 
+  - Type: `Map<String, String>`
+  - Description: A map of HTTP request headers.
+
+- **`params`**: 
+  - Type: `Map<String, Object>`
+  - Description: A map of parameters sent with the request.
+
+- **`where`**: 
+  - Type: `String`
+  - Description: A condition that determines whether the worker should be executed.
+
+- **`labels`**: 
+  - Type: `Map<String, String>`
+  - Description: A map with additional information or metadata about the worker. Labels are written to tracing.
+
+- **`blocked`**: 
+  - Type: `boolean`
+  - Description: Indicates whether the worker is synchronous or asynchronous.
+
+- **`timeout`**: 
+  - Type: `Integer`
+  - Description: The time limit (in seconds) for executing the request.
+
+---
+
+## Example YAML Configuration of Flow
+
+Here is an example of flow configuration in YAML format:
+
+```yaml
+code: flow
+steps:
+  - code: step1
+    workers:
+      - code: worker1
+        path: POST
+        headers:
+          header1: header1
+        params:
+          a: 1 # constant parameter
+          $a: case.params.a # expression
+  - code: step2
+    itemsExpr: case.assets
+    workers:
+      - code: worker2
+        path: POST
+        headers:
+          header1: header1
+          $header2: case.created # expression
+        params:
+          a: 1 # constant parameter
+          $a: case.params.a # expression
+
+This documentation provides an overview of the data objects and their attributes that form the basis for processing flows in the API-Flow application.
