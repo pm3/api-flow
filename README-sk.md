@@ -64,10 +64,6 @@ Trieda `FlowDef` definuje hlavný objekt flow, ktorý obsahuje základné inform
   - Typ: `String`
   - Popis: Informácie o autentifikácii, ktoré sa použijú pri vykonávaní flow.
 
-- **`executor`**: 
-  - Typ: `String`
-  - Popis: Definuje executor, ktorý spracúva vykonávanie flow.
-
 - **`steps`**: 
   - Typ: `List<FlowStepDef>`
   - Popis: Zoznam krokov (`FlowStepDef`), ktoré definujú jednotlivé časti flow.
@@ -78,7 +74,7 @@ Trieda `FlowDef` definuje hlavný objekt flow, ktorý obsahuje základné inform
 
 - **`response`**: 
   - Typ: `Map<String, Object>`
-  - Popis: Mapa, ktorá obsahuje odpoveď vrátenú po vykonaní flow.
+  - Popis: Mapa, ktorá obsahuje expression pre vyskaldanie odpovedi z workerov.
 
 ---
 
@@ -118,7 +114,7 @@ Trieda `FlowWorkerDef` definuje worker, ktorý vykonáva konkrétnu HTTP požiad
 
 - **`pathExpr`**: 
   - Typ: `String`
-  - Popis: Výraz, ktorý určuje dynamickú cestu pre HTTP požiadavku (používa sa pri anotácii `@JsonProperty(value = "$path")`).
+  - Popis: Výraz, ktorý určuje dynamickú cestu pre HTTP požiadavku.
 
 - **`method`**: 
   - Typ: `String`
@@ -138,15 +134,15 @@ Trieda `FlowWorkerDef` definuje worker, ktorý vykonáva konkrétnu HTTP požiad
 
 - **`labels`**: 
   - Typ: `Map<String, String>`
-  - Popis: Mapa s dodatočnými informáciami alebo metadátami o workerovi.
+  - Popis: Mapa s dodatočnými informáciami alebo metadátami o workerovi. Labels sa zapisu do tracing.
 
 - **`blocked`**: 
   - Typ: `boolean`
-  - Popis: Indikuje, či je worker blokovaný pri vykonávaní.
+  - Popis: Indikuje, či je worker synchrónny alebo asynchrónny.
 
 - **`timeout`**: 
   - Typ: `Integer`
-  - Popis: Časový limit (v milisekundách) pre vykonanie požiadavky.
+  - Popis: Časový limit (v sekundách) pre vykonanie požiadavky.
 
 ---
 
@@ -173,9 +169,10 @@ steps:
         path: POST
         headers:
           header1: header1
+          $header2: case.created #expression
         params:
           a: 1 # konstantný parameter
-          $a: case.params.a # výraz
+          $a: case.params.a # expression
 
 Táto dokumentácia poskytuje prehľad o dátových objektoch a ich atribútoch, ktoré sú základom pre spracovanie flow v API-Flow aplikácii.
 
