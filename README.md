@@ -180,6 +180,7 @@ steps:
         params:
           a: 1 # constant parameter
           $a: case.params.a # expression
+```
 
 This documentation provides an overview of the data objects and their attributes that form the basis for processing flows in the API-Flow application.
 
