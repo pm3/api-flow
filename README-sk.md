@@ -176,3 +176,14 @@ steps:
 
 Táto dokumentácia poskytuje prehľad o dátových objektoch a ich atribútoch, ktoré sú základom pre spracovanie flow v API-Flow aplikácii.
 
+---
+
+## Používanie výrazov (Expressions)
+
+Na manipuláciu s dátami sa používa OGNL výraz. Výraz je možné použiť pri workeroch na položkách `$path`, `where`, `headers` a `params`.
+
+Pokiaľ ide o `headers` a `params`, ide o mapu. Ak sa názov parametra začína symbolom `$`, jeho hodnota je považovaná za výraz. V opačnom prípade ide o statickú vlastnosť.
+
+Ak je v mape iba jedna vlastnosť s názvom `$`, výstup nie je mapa, ale hodnota vyhodnotená z výrazu z parametra value.
+
+
