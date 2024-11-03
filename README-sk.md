@@ -45,3 +45,137 @@ API-Flow podporuje niekoľko typov volaní:
 3. **Asynchrónne volanie cez queue**: Pri tomto type sa request uloží do queue a následne ho spracováva sidecar, ktorý volá cieľovú webovú službu. Sidecar potom pošle výsledok späť do flow ako callback.
 
 API-Flow týmto spôsobom ponúka robustný prístup k riadeniu asynchrónnych procesov, zabezpečeniu paralelného vykonávania a monitorovaniu stavu jednotlivých úloh v rámci microservices architektúry.
+
+# Dokumentácia konfigurácie flow
+
+Táto dokumentácia popisuje dátové objekty používané v API-Flow, vrátane ich atribútov a účelu.
+
+## 1. `FlowDef`
+
+Trieda `FlowDef` definuje hlavný objekt flow, ktorý obsahuje základné informácie o flow a jeho krokoch.
+
+### Atribúty
+
+- **`code`**: 
+  - Typ: `String`
+  - Popis: Unikátny identifikátor flow.
+
+- **`auth`**: 
+  - Typ: `String`
+  - Popis: Informácie o autentifikácii, ktoré sa použijú pri vykonávaní flow.
+
+- **`executor`**: 
+  - Typ: `String`
+  - Popis: Definuje executor, ktorý spracúva vykonávanie flow.
+
+- **`steps`**: 
+  - Typ: `List<FlowStepDef>`
+  - Popis: Zoznam krokov (`FlowStepDef`), ktoré definujú jednotlivé časti flow.
+
+- **`labels`**: 
+  - Typ: `Map<String, String>`
+  - Popis: Mapa s dodatočnými informáciami alebo metadátami o flow.
+
+- **`response`**: 
+  - Typ: `Map<String, Object>`
+  - Popis: Mapa, ktorá obsahuje odpoveď vrátenú po vykonaní flow.
+
+---
+
+## 2. `FlowStepDef`
+
+Trieda `FlowStepDef` definuje jednotlivé kroky v rámci flow. Každý krok môže obsahovať workerov, ktorí vykonávajú HTTP požiadavky.
+
+### Atribúty
+
+- **`code`**: 
+  - Typ: `String`
+  - Popis: Unikátny identifikátor kroku.
+
+- **`itemsExpr`**: 
+  - Typ: `String`
+  - Popis: Výraz, ktorý generuje zoznam položiek pre tento krok (napr. iterátor).
+
+- **`workers`**: 
+  - Typ: `List<FlowWorkerDef>`
+  - Popis: Zoznam workerov (`FlowWorkerDef`), ktorí sú súčasťou tohto kroku.
+
+---
+
+## 3. `FlowWorkerDef`
+
+Trieda `FlowWorkerDef` definuje worker, ktorý vykonáva konkrétnu HTTP požiadavku v rámci kroku flow.
+
+### Atribúty
+
+- **`code`**: 
+  - Typ: `String`
+  - Popis: Unikátny identifikátor workera.
+
+- **`path`**: 
+  - Typ: `String`
+  - Popis: Cesta, na ktorú sa worker pokúsi vykonať HTTP požiadavku.
+
+- **`pathExpr`**: 
+  - Typ: `String`
+  - Popis: Výraz, ktorý určuje dynamickú cestu pre HTTP požiadavku (používa sa pri anotácii `@JsonProperty(value = "$path")`).
+
+- **`method`**: 
+  - Typ: `String`
+  - Popis: Typ HTTP metódy (napr. `GET`, `POST`, atď.) používaný pri požiadavke.
+
+- **`headers`**: 
+  - Typ: `Map<String, String>`
+  - Popis: Mapa s hlavičkami HTTP požiadavky.
+
+- **`params`**: 
+  - Typ: `Map<String, Object>`
+  - Popis: Mapa parametrov, ktoré sa posielajú v rámci požiadavky.
+
+- **`where`**: 
+  - Typ: `String`
+  - Popis: Podmienka, ktorá určuje, či sa má worker vykonať.
+
+- **`labels`**: 
+  - Typ: `Map<String, String>`
+  - Popis: Mapa s dodatočnými informáciami alebo metadátami o workerovi.
+
+- **`blocked`**: 
+  - Typ: `boolean`
+  - Popis: Indikuje, či je worker blokovaný pri vykonávaní.
+
+- **`timeout`**: 
+  - Typ: `Integer`
+  - Popis: Časový limit (v milisekundách) pre vykonanie požiadavky.
+
+---
+
+## Príklad YAML konfigurácie flow
+
+Nasleduje príklad konfigurácie flow v YAML formáte:
+
+```yaml
+code: flow
+steps:
+  - code: step1
+    workers:
+      - code: worker1
+        path: POST
+        headers:
+          header1: header1
+        params:
+          a: 1 # konstantný parameter
+          $a: case.params.a # výraz
+  - code: step2
+    itemsExpr: case.assets
+    workers:
+      - code: worker2
+        path: POST
+        headers:
+          header1: header1
+        params:
+          a: 1 # konstantný parameter
+          $a: case.params.a # výraz
+
+Táto dokumentácia poskytuje prehľad o dátových objektoch a ich atribútoch, ktoré sú základom pre spracovanie flow v API-Flow aplikácii.
+
