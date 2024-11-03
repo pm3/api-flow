@@ -173,7 +173,7 @@ steps:
         params:
           a: 1 # konstantný parameter
           $a: case.params.a # expression
-
+```
 Táto dokumentácia poskytuje prehľad o dátových objektoch a ich atribútoch, ktoré sú základom pre spracovanie flow v API-Flow aplikácii.
 
 ---
