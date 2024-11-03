@@ -4,7 +4,6 @@
 
 ### Základy Microservice Architektúry: Request/Response
 - **Microservice** je založený na princípe **request/response**.
-- ![Request/Service/Response Diagram](#) - ilustrácia request -> service -> response.
 - Request funguje ako webová transakcia – môže skončiť úspešne alebo chybne.
 - Používateľ vidí, či request skončil úspešne alebo chybne.
 - **Časové obmedzenie**: request by mal byť dokončený v rozumnom čase, zvyčajne do 45 sekúnd.
@@ -24,21 +23,18 @@
 
 - **Externý cron job**:
   - Cron job by mal byť vytvorený ako webová služba a spustený externým cron deamonom.
-  - ![Cron/Service Diagram](#) - ilustrácia cron -> service.
   - **Výhody**:
     - Zalogovanie každého volania, úspešného aj neúspešného.
     - Soft-semafor: ak je viac inštancií, volanie spracuje iba jedna.
     - Ak je striktne potrebné spustenie iba raz, je nutné riešiť globálny zámok v rámci microservice.
 
 ### Asynchrónna komunikácia: Webservice, ktorý volá ďalšie služby
-- ![Asynchronous Service Flow Diagram](#) - ilustrácia request -> service -> async service 1,2,3 -> response.
 - **Časovo náročný proces**:
   - Musí udržiavať stav jednotlivých krokov (už nejde o bezstavový proces).
   - Po reštarte kontajnera nie je schopný pokračovať.
   - **Zložitosť pri konkurenčnom volaní**: problém s limitovanou konkurenciou a paralelným volaním služieb, pričom treba zabezpečiť správne spojenie odpovedí (joinovanie).
 
 ### Broker s Queue/Topic
-- ![Broker/Consumer/Event Diagram](#) - ilustrácia broker <- consumer -> event.
 - **Špecifické vlastnosti**:
   - Používa vlastný protokol a externé knižnice.
   - Rieši odlišný spôsob autorizácie.
@@ -70,12 +66,12 @@ API-Flow je aplikácia na riadenie background procesov v microservices architekt
 
 ### Typy volania Workera
 - **Synchronné volanie webovej služby**:
-  - ![Synchronous Request/Response Diagram](#) - request -> service -> response.
+  - request -> service -> response.
 - **Asynchrónne volanie s callback-om**:
-  - ![Asynchronous Request/Callback Diagram](#) - request+callback -> service, service -> callback.
+  - request+callback -> service, service -> callback.
   - Prvé volanie obsahuje callback linku v hlavičke. Keď webová služba skončí, zavolá POST na callback linku s odpoveďou.
 - **Asynchrónne volanie cez queue**:
-  - ![Queue/Sidecar/Service Diagram](#) - request -> queue -> sidecar -> service.
+  - request -> queue -> sidecar request -> service -> sidecar response -> callback.
   - Request sa zapíše do queue.
   - Sidecar vyberie requesty z queue a volá koncovú webovú službu.
   - Sidecar následne callback volaním odošle výsledok späť do flow.
