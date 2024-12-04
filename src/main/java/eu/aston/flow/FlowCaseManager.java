@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,8 @@ import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.store.IFlowCaseStore;
 import eu.aston.flow.store.IFlowTaskStore;
+import eu.aston.flow.task.TaskExecutor;
+import eu.aston.flow.task.TaskHttpRequest;
 import eu.aston.header.Callback;
 import eu.aston.header.CallbackRunner;
 import eu.aston.span.ISpanSender;
@@ -50,6 +53,7 @@ public class FlowCaseManager {
     private final FlowThreadPool flowThreadPool;
     private final CallbackRunner callbackRunner;
     private final SuperTimer superTimer;
+    private final TaskExecutor taskExecutor;
 
     public FlowCaseManager(BlobStore blobStore,
                            IFlowCaseStore caseStore,
@@ -59,7 +63,7 @@ public class FlowCaseManager {
                            WaitingFlowCaseManager waitingFlowCaseManager,
                            ISpanSender spanSender,
                            CallbackRunner callbackRunner,
-                           SuperTimer superTimer) {
+                           SuperTimer superTimer, TaskExecutor taskExecutor) {
         this.blobStore = blobStore;
         this.caseStore = caseStore;
         this.taskStore = taskStore;
@@ -69,6 +73,7 @@ public class FlowCaseManager {
         this.spanSender = spanSender;
         this.callbackRunner = callbackRunner;
         this.superTimer = superTimer;
+        this.taskExecutor = taskExecutor;
         this.flowThreadPool = new FlowThreadPool(4, this::nextTick);
     }
 
@@ -188,33 +193,35 @@ public class FlowCaseManager {
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                                       .orElseThrow(()->new UserException("invalid flowCaseType id="+flowCase.getId()+", type="+flowCase.getCaseType()));
         List<FlowTaskEntity> tasks = taskStore.selectTaskByCaseId(flowCase.getId());
-
+        Map<String, FlowTaskEntity> taskMap = tasks.stream().collect(Collectors.toMap(FlowTaskEntity::getId, Function.identity()));
         LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getState());
 
         String aktStepCode = openTasks(flowDef, flowCase, tasks);
         if(aktStepCode!=null){
             IFlowExecutor executor = flowExecutorMap.get(flowDef.getExecutor());
-            executor.execTick(flowDef, flowCase, tasks, aktStepCode, new IFlowExecutor.IFlowBack() {
-                @Override
-                public void sentTask(FlowTaskEntity task) {
-                    if(task.getCreated()==null){
-                        task.setCreated(Instant.now());
-                        taskStore.insert(task);
-                        if(task.getTimeout()!=null){
-                            superTimer.schedule(task.getTimeout()*1000L, task.getId(), FlowCaseManager.this::taskTimeout);
-                        }
+            List<TaskHttpRequest> requests = executor.execTick(flowDef, flowCase, tasks, aktStepCode);
+            for(TaskHttpRequest request : requests){
+                FlowTaskEntity task = taskMap.get(request.taskId());
+                if(request.error()!=null){
+                    int statusCode = 400;
+                    String message = request.error();
+                    if(message.matches("^\\d+:.*")){
+                        String[] parts = message.split(":", 2);
+                        statusCode = Integer.parseInt(parts[0]);
+                        message = parts[1];
+                    }
+                    finishTask(flowDef, flowCase, task, statusCode, message);
+                } else {
+                    try{
+                        Runnable handleSend = ()->sentTask(task);
+                        BiConsumer<Integer, Object> finishTask = (state, resp) -> finishTask(flowDef, flowCase, task, state, resp);
+                        boolean debug = flowDef.getLabels()!=null && flowDef.getLabels().containsKey("debug");
+                        taskExecutor.execute(request, task, handleSend, finishTask, true);
+                    }catch (Exception e){
+                        finishTask(flowDef, flowCase, task, 500, e.getMessage());
                     }
                 }
-
-                @Override
-                public void finishTask(FlowTaskEntity task, int statusCode, Object response) {
-                    if(task.getCreated()==null){
-                        task.setCreated(Instant.now());
-                        taskStore.insert(task);
-                    }
-                    finishTask0(flowDef, flowCase, task, statusCode, response);
-                }
-            });
+            }
         }
     }
 
@@ -311,6 +318,24 @@ public class FlowCaseManager {
             }
         }
         return null;
+    }
+
+    public void sentTask(FlowTaskEntity task) {
+        if(task.getCreated()==null){
+            task.setCreated(Instant.now());
+            taskStore.insert(task);
+            if(task.getTimeout()!=null){
+                superTimer.schedule(task.getTimeout()*1000L, task.getId(), this::taskTimeout);
+            }
+        }
+    }
+
+    public void finishTask(FlowDef flowDef, FlowCaseEntity flowCase, FlowTaskEntity task, int statusCode, Object response) {
+        if(task.getCreated()==null){
+            task.setCreated(Instant.now());
+            taskStore.insert(task);
+        }
+        finishTask0(flowDef, flowCase, task, statusCode, response);
     }
 
     private void finishFlow(FlowCaseEntity flowCaseEntity, FlowDef flowDef, List<FlowTaskEntity> tasks) {

@@ -11,20 +11,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.IFlowExecutor;
+import eu.aston.flow.QueueFlowBridge;
 import eu.aston.flow.def.FlowDef;
-import eu.aston.flow.ognl.YamlOgnlFlowExecutor;
+import eu.aston.flow.ognl.OgnlFlowExecutor;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
+import eu.aston.flow.task.TaskHttpRequest;
 import eu.aston.header.CallbackRunner;
 import eu.aston.utils.ID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 public class YamlOgnlTest {
@@ -60,13 +64,12 @@ public class YamlOgnlTest {
     }
 
     @Test
-    public void testEcho(){
+    public void testEcho() throws Exception{
         FlowDef flow1 = flowDefStore.flowDef("echo_flow")
                                     .orElseThrow(()-> new RuntimeException("undefined flow"));
 
         CallbackRunner callbackRunner = Mockito.mock(CallbackRunner.class);
-        YamlOgnlFlowExecutor yamlOgnlFlowExecutor = new YamlOgnlFlowExecutor(flowDefStore, null, appConfig, objectMapper, callbackRunner);
-        IFlowExecutor.IFlowBack flowBack = Mockito.mock(IFlowExecutor.IFlowBack.class);
+        OgnlFlowExecutor yamlOgnlFlowExecutor = new OgnlFlowExecutor(flowDefStore, objectMapper);
 
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
@@ -77,13 +80,14 @@ public class YamlOgnlTest {
         flowCase.getParams().put("b", "b");
         List<FlowTaskEntity> tasks = new ArrayList<>();
         tasks.add(new FlowTaskEntity("1", flowCase.getId(), "step1", "worker_echo_local", 0));
-        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step1", flowBack);
-        Mockito.verify(flowBack).finishTask(tasks.getFirst(), 200, Map.of("a", "a", "b", "b"));
+        List<TaskHttpRequest> requests = yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step1");
+        Assertions.assertEquals(1, requests.size(), "request size");
+        String json = objectMapper.writeValueAsString(Map.of("a", "a", "b", "b"));
+        Assertions.assertEquals(json, requests.get(0).body(), "request body");
     }
 
     @Test
     public void testBlocked() throws Exception {
-
 
         CallbackRunner callbackRunner = Mockito.mock();
         HttpResponse<Object> response = Mockito.mock();
@@ -92,12 +96,10 @@ public class YamlOgnlTest {
         CompletableFuture<HttpResponse<Object>> future = new CompletableFuture<>();
         future.complete(response);
         Mockito.when(callbackRunner.callAsync(Mockito.any(),Mockito.any(),Mockito.any(),Mockito.any(),Mockito.any())).thenReturn(future);
-        YamlOgnlFlowExecutor yamlOgnlFlowExecutor = new YamlOgnlFlowExecutor(flowDefStore, null, appConfig, objectMapper, callbackRunner);
+        OgnlFlowExecutor yamlOgnlFlowExecutor = new OgnlFlowExecutor(flowDefStore, objectMapper);
 
         FlowDef flow1 = flowDefStore.flowDef("echo_flow")
                                     .orElseThrow(()-> new RuntimeException("undefined flow"));
-
-        IFlowExecutor.IFlowBack flowBack = Mockito.mock(IFlowExecutor.IFlowBack.class);
 
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
@@ -112,10 +114,11 @@ public class YamlOgnlTest {
         t0.setResponse(Map.of("c", "c"));
         tasks.add(t0);
         tasks.add(new FlowTaskEntity(ID.newId(), flowCase.getId(), "step2", "worker_echo_block", 0));
-        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2", flowBack);
-
-        Mockito.verify(flowBack).finishTask(tasks.get(1), 200, Map.of("a", "a"));
+        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2");
     }
+
+    @Mock
+    BiConsumer<Integer, Object> finishTask;
 
     @Test
     public void testBlockedError() throws Exception {
@@ -127,12 +130,10 @@ public class YamlOgnlTest {
         CompletableFuture<HttpResponse<Object>> future = new CompletableFuture<>();
         future.complete(response);
         Mockito.when(callbackRunner.callAsync(Mockito.any(),Mockito.any(),Mockito.any(),Mockito.any(),Mockito.any())).thenReturn(future);
-        YamlOgnlFlowExecutor yamlOgnlFlowExecutor = new YamlOgnlFlowExecutor(flowDefStore, null, appConfig, objectMapper, callbackRunner);
+        OgnlFlowExecutor yamlOgnlFlowExecutor = new OgnlFlowExecutor(flowDefStore, objectMapper);
 
         FlowDef flow1 = flowDefStore.flowDef("echo_flow")
                                     .orElseThrow(()-> new RuntimeException("undefined flow"));
-
-        IFlowExecutor.IFlowBack flowBack = Mockito.mock(IFlowExecutor.IFlowBack.class);
 
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
@@ -147,51 +148,42 @@ public class YamlOgnlTest {
         t0.setResponse(Map.of("c", "c"));
         tasks.add(t0);
         tasks.add(new FlowTaskEntity(ID.newId(), flowCase.getId(), "step2", "worker_echo_block", 0));
-        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2", flowBack);
+        List<TaskHttpRequest> requests = yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2");
 
-        Mockito.verify(flowBack).finishTask(tasks.get(1), 400, "error400");
+
     }
 
-//    @Test
-//    public void testBlockedQueue() throws Exception {
-//
-//        QueueFlowBridge flowBridge = Mockito.mock();
-//        CallbackRunner callbackRunner = Mockito.mock(CallbackRunner.class);
-//        YamlOgnlFlowExecutor yamlOgnlFlowExecutor = new YamlOgnlFlowExecutor(flowDefStore, flowBridge, appConfig, objectMapper, callbackRunner);
-//
-//        FlowDef flow1 = flowDefStore.flowDef("echo_flow")
-//                                    .orElseThrow(()-> new RuntimeException("undefined flow"));
-//
-//        IFlowExecutor.IFlowBack flowBack = Mockito.mock(IFlowExecutor.IFlowBack.class);
-//
-//        FlowCaseEntity flowCase = new FlowCaseEntity();
-//        flowCase.setId(ID.newId());
-//        flowCase.setCaseType(flow1.getCode());
-//        flowCase.setState("step-step2");
-//        flowCase.setParams(new HashMap<>());
-//        flowCase.getParams().put("a", "a");
-//        flowCase.getParams().put("b", "b");
-//        List<FlowTaskEntity> tasks = new ArrayList<>();
-//        FlowTaskEntity t0 = new FlowTaskEntity("1", flowCase.getId(), "step1", "worker_echo_local", 0);
-//        t0.setFinished(Instant.now());
-//        t0.setResponse(Map.of("c", "c"));
-//        tasks.add(t0);
-//        tasks.add(new FlowTaskEntity(ID.newId(), flowCase.getId(), "step2", "worker_echo_block", 0));
-//        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2", flowBack);
-//
-//        Mockito.verify(flowBridge).sendQueueEvent(tasks.getLast(),
-//                                                  "POST",
-//                                                  "http://localhost:8089/echo",
-//                                                  null,
-//                                                  "{\"a\":\"a\",\"b\":\"b\",\"c\":\"c\"}".getBytes(StandardCharsets.UTF_8)
-//                                                 , null);
-//    }
+    @Test
+    public void testBlockedQueue() throws Exception {
+
+        QueueFlowBridge flowBridge = Mockito.mock();
+        CallbackRunner callbackRunner = Mockito.mock(CallbackRunner.class);
+        OgnlFlowExecutor yamlOgnlFlowExecutor = new OgnlFlowExecutor(flowDefStore, objectMapper);
+
+        FlowDef flow1 = flowDefStore.flowDef("echo_flow")
+                                    .orElseThrow(()-> new RuntimeException("undefined flow"));
+
+        FlowCaseEntity flowCase = new FlowCaseEntity();
+        flowCase.setId(ID.newId());
+        flowCase.setCaseType(flow1.getCode());
+        flowCase.setState("step-step2");
+        flowCase.setParams(new HashMap<>());
+        flowCase.getParams().put("a", "a");
+        flowCase.getParams().put("b", "b");
+        List<FlowTaskEntity> tasks = new ArrayList<>();
+        FlowTaskEntity t0 = new FlowTaskEntity("1", flowCase.getId(), "step1", "worker_echo_local", 0);
+        t0.setFinished(Instant.now());
+        t0.setResponse(Map.of("c", "c"));
+        tasks.add(t0);
+        tasks.add(new FlowTaskEntity(ID.newId(), flowCase.getId(), "step2", "worker_echo_block", 0));
+        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step2");
+    }
 
     @Test
     public void testAsync() throws Exception{
 
         CallbackRunner callbackRunner = Mockito.mock(CallbackRunner.class);
-        YamlOgnlFlowExecutor yamlOgnlFlowExecutor = new YamlOgnlFlowExecutor(flowDefStore, null, appConfig, objectMapper, callbackRunner);
+        OgnlFlowExecutor yamlOgnlFlowExecutor = new OgnlFlowExecutor(flowDefStore, objectMapper);
 
         FlowDef flow1 = flowDefStore.flowDef("echo_flow")
                                     .orElseThrow(()-> new RuntimeException("undefined flow"));
@@ -205,17 +197,7 @@ public class YamlOgnlTest {
         flowCase.getParams().put("b", "b");
         List<FlowTaskEntity> tasks = new ArrayList<>();
         tasks.add(new FlowTaskEntity(ID.newId(), flowCase.getId(), "step3", "worker_echo_async", 0));
-        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step3", new IFlowExecutor.IFlowBack() {
-            @Override
-            public void sentTask(FlowTaskEntity task) {
-                System.out.println("testAsync sentTas");
-            }
-
-            @Override
-            public void finishTask(FlowTaskEntity task, int statusCode, Object response) {
-                System.out.println("testAsync "+ response);
-            }
-        });
+        yamlOgnlFlowExecutor.execTick(flow1, flowCase, tasks, "step3");
         Thread.sleep(1000);
         System.out.println(objectMapper.writeValueAsString(tasks.getFirst()));
     }

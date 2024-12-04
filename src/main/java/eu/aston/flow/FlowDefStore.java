@@ -22,7 +22,7 @@ import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.nodejs.NodeJsFlowExecutor;
-import eu.aston.flow.ognl.YamlOgnlFlowExecutor;
+import eu.aston.flow.ognl.OgnlFlowExecutor;
 import eu.aston.user.AuthException;
 import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
@@ -71,7 +71,7 @@ public class FlowDefStore {
                 try{
                     LOGGER.info("start load flow yaml {}", f.getName());
                     FlowDef flowDef = yamlObjectMapper.readValue(f, FlowDef.class);
-                    flowDef.setExecutor(YamlOgnlFlowExecutor.ID);
+                    flowDef.setExecutor(OgnlFlowExecutor.ID);
                     loadFlow(f, flowDef, true);
                 }catch (Exception e){
                     LOGGER.warn("ignore flow file yaml {} - {}", f.getAbsolutePath(), e.getMessage());

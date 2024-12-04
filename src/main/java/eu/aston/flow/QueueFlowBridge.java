@@ -3,9 +3,11 @@ package eu.aston.flow;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.store.FlowTaskEntity;
+import eu.aston.flow.task.TaskHttpRequest;
 import eu.aston.header.HeaderConverter;
 import eu.aston.queue.EventResponse;
 import eu.aston.queue.QueueEvent;
@@ -30,40 +32,43 @@ public class QueueFlowBridge {
         this.objectMapper = objectMapper;
     }
 
-    public boolean sendQueueEvent(FlowTaskEntity task, String method, String path, Map<String, String> headers, byte[] body, IFlowExecutor.IFlowBack flowBack){
-        if(queueStore!=null && path.startsWith(QUEUE_PREFIX) && path.length()> QUEUE_PREFIX.length()){
-            path = path.substring(QUEUE_PREFIX.length()-1);
+    public boolean queueEvent(String path){
+        return queueStore!=null && path.startsWith(QUEUE_PREFIX) && path.length()> QUEUE_PREFIX.length();
+    }
+
+    public void sendQueueEvent(FlowTaskEntity task, TaskHttpRequest request, Runnable handleSend, BiConsumer<Integer, Object> finishTask){
+        if(queueEvent(request.path())){
+            String path = request.path().substring(QUEUE_PREFIX.length()-1);
             LOGGER.info("event {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
-            if(headers==null) headers = new HashMap<>();
+            Map<String, String> headers = new HashMap<>();
+            if(request.headers()!=null) headers.putAll(request.headers());
             QueueEvent event = new QueueEvent();
             event.setId(task.getId());
             event.setPath(path);
-            event.setMethod(method);
+            event.setMethod(request.method());
             event.setHeaders(headers);
             headers.put(HeaderConverter.H_CASE_ID, task.getFlowCaseId());
             headers.put(HeaderConverter.H_ID, task.getId());
             headers.put(HeaderConverter.H_METHOD, event.getMethod());
             headers.put(HeaderConverter.H_URI, path);
             if(!headers.containsKey(HttpHeaders.CONTENT_TYPE)) headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-            event.setBody(body);
-            event.setHandleSend(()->flowBack.sentTask(task));
-            event.setHandleResponse((eventResponse -> eventResponse(task, flowBack, eventResponse)));
+            event.setBody(request.body().getBytes(StandardCharsets.UTF_8));
+            event.setHandleSend(handleSend);
+            event.setHandleResponse((eventResponse -> eventResponse(finishTask, eventResponse)));
             queueStore.addEvent(event);
-            return true;
         }
-        return false;
     }
 
-    public void eventResponse(FlowTaskEntity task, IFlowExecutor.IFlowBack flowBack, EventResponse eventResponse) {
+    public void eventResponse(BiConsumer<Integer, Object> finishTask, EventResponse eventResponse) {
         try {
             if(eventResponse.status()>=200 && eventResponse.status()<300) {
                 Object root = objectMapper.readValue(eventResponse.body(), Object.class);
-                flowBack.finishTask(task, eventResponse.status(), root);
+                finishTask.accept(eventResponse.status(), root);
             } else {
-                flowBack.finishTask(task, eventResponse.status(), new String(eventResponse.body(), StandardCharsets.UTF_8));
+                finishTask.accept(eventResponse.status(), new String(eventResponse.body(), StandardCharsets.UTF_8));
             }
         }catch (Exception e){
-            flowBack.finishTask(task, 400, "parse json body error "+e.getMessage());
+            finishTask.accept(400, "parse json body error "+e.getMessage());
         }
     }
 }

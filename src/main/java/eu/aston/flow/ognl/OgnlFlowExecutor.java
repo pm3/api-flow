@@ -1,8 +1,5 @@
 package eu.aston.flow.ognl;
 
-import java.net.URI;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,36 +19,25 @@ import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
+import eu.aston.flow.task.TaskHttpRequest;
 import eu.aston.header.CallbackRunner;
-import eu.aston.header.HeaderConverter;
 import eu.aston.user.UserException;
-import eu.aston.utils.Hash;
 import jakarta.inject.Singleton;
 import ognl.OgnlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class YamlOgnlFlowExecutor implements IFlowExecutor {
+public class OgnlFlowExecutor implements IFlowExecutor {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(YamlOgnlFlowExecutor.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(OgnlFlowExecutor.class);
 
     public static final String ID = "yaml";
     private final FlowDefStore flowDefStore;
-    private final QueueFlowBridge flowBridge;
-    private final AppConfig appConfig;
-    private final byte[] taskApiKeySecret;
     private final ObjectMapper objectMapper;
-    private final CallbackRunner callbackRunner;
 
-    public YamlOgnlFlowExecutor(FlowDefStore flowDefStore, QueueFlowBridge flowBridge, AppConfig appConfig,
-                                ObjectMapper objectMapper, CallbackRunner callbackRunner) {
+    public OgnlFlowExecutor(FlowDefStore flowDefStore, ObjectMapper objectMapper) {
         this.flowDefStore = flowDefStore;
-        this.flowBridge = flowBridge;
-        this.appConfig = appConfig;
-        this.taskApiKeySecret = appConfig.getTaskApiKeySecret().getBytes(StandardCharsets.UTF_8);
-        this.callbackRunner = callbackRunner;
-
         this.objectMapper = objectMapper.copy();
         SimpleModule module = new SimpleModule();
         module.addSerializer(TaskResponseException.class, new RuntimeExceptionSerializer());
@@ -64,8 +50,8 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
     }
 
     @Override
-    public void execTick(FlowDef flowDef, FlowCaseEntity flowCase, List<FlowTaskEntity> tasks,
-                         String stepCode, IFlowBack flowBack) {
+    public List<TaskHttpRequest> execTick(FlowDef flowDef, FlowCaseEntity flowCase, List<FlowTaskEntity> tasks, String stepCode) {
+        List<TaskHttpRequest> requests = new ArrayList<>();
 
         List<String> iterableSteps = flowDef.getSteps().stream()
                                             .filter(s->s.getItemsExpr()!=null)
@@ -89,11 +75,12 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
                 .filter(t->t.getFinished()==null && t.getCreated()==null)
                 .collect(Collectors.groupingBy(FlowTaskEntity::getStepIndex));
 
-        openedTasks.forEach((stepIndex, openTasks)->execTickStep(stepCode, stepIndex, flowDef, flowCase, openTasks, steps, flowBack));
+        openedTasks.forEach((stepIndex, openTasks)->execTickStep(stepCode, stepIndex, flowDef, flowCase, openTasks, steps, requests));
+        return requests;
     }
 
     private void execTickStep(String stepCode, int stepIndex, FlowDef flowDef, FlowCaseEntity flowCase,
-                              List<FlowTaskEntity> openTasks, Map<String, FlowScript.LazyMap> steps, IFlowBack flowBack){
+                              List<FlowTaskEntity> openTasks, Map<String, FlowScript.LazyMap> steps, List<TaskHttpRequest> requests){
 
         LOGGER.debug("next tick {}",flowCase.getId());
         LOGGER.debug("opened tasks {}", openTasks.stream().map(FlowTaskEntity::getWorker).toList());
@@ -117,36 +104,36 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         LOGGER.debug("root {}", root);
         FlowScript flowScript = new FlowScript(root);
         for(FlowTaskEntity task : openTasks){
-            execTask(task, flowDef, flowCase, flowScript, flowBack);
+            TaskHttpRequest request = execTask(task, flowDef, flowCase, flowScript);
+            if(request!=null) {
+                requests.add(request);
+            }
         }
     }
 
-    private void execTask(FlowTaskEntity task, FlowDef flowDef, FlowCaseEntity flowCase, FlowScript flowScript, IFlowBack flowBack) {
+    private TaskHttpRequest execTask(FlowTaskEntity task, FlowDef flowDef, FlowCaseEntity flowCase, FlowScript flowScript) {
 
         FlowWorkerDef workerDef = flowDefStore.cacheWorker(flowDef, task.getStep(), task.getWorker());
         if(workerDef.getWhere()!=null){
             try{
                 if(!flowScript.execWhere(workerDef.getWhere())){
-                    flowBack.finishTask(task, 406, "where=false");
-                    return;
+                    return TaskHttpRequest.of(task.getId(), "406:where=false");
                 }
             }catch (WaitingException e){
-                return;
+                return null;
             }catch (TaskResponseException e){
-                flowBack.finishTask(task, 400, e.getMessage());
-                return;
+                return TaskHttpRequest.of(task.getId(), e.getMessage());
             }catch (OgnlException e){
-                LOGGER.warn("ignore task {} where {}, exec exception {}", task, workerDef.getWhere(), e.getMessage());
-                flowBack.finishTask(task, 400, "execute where exception "+e.getMessage());
-                return;
+                LOGGER.warn("ignore task {} where {}, exec error {}", task, workerDef.getWhere(), e.getMessage());
+                return TaskHttpRequest.of(task.getId(),"execute where error "+e.getMessage());
             }
         }
 
         String error = null;
         try{
-            sendTask(flowScript, workerDef, flowCase, flowDef, task, flowBack);
+            return sendTask(flowScript, workerDef, flowCase, flowDef, task);
         }catch (WaitingException e) {
-            return;
+            return null;
         }catch (TaskResponseException e) {
             error = e.getMessage();
         }catch (OgnlException e) {
@@ -158,12 +145,13 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         }
         if(error!=null){
             task.setError(error);
-            flowBack.finishTask(task, 400, error);
+            return TaskHttpRequest.of(task.getId(), error);
         }
+        return null;
     }
 
     @SuppressWarnings("rawtypes")
-    private void sendTask(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowDef flowDef, FlowTaskEntity task, IFlowBack flowBack) throws Exception {
+    private TaskHttpRequest sendTask(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowDef flowDef, FlowTaskEntity task) throws Exception {
 
         String path = workerDef.getPath();
 
@@ -186,88 +174,17 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
             }
         }
 
-        sendTaskHttp(task, flowDef, workerDef.getMethod(), path, headers, params, workerDef.isBlocked(), flowBack);
-    }
-
-    protected void sendTaskHttp(FlowTaskEntity task, FlowDef flowDef, String method, String path, Map<String, String> headers, Object params, boolean blocked, IFlowBack flowBack) throws Exception {
-        byte[] data = null;
+        String data = null;
         if(params!=null){
             try{
-                data = objectMapper.writeValueAsBytes(params);
+                data = objectMapper.writeValueAsString(params);
             }catch (JsonMappingException e){
                 if(e.getCause() instanceof WaitingException e2) throw e2;
                 if(e.getCause() instanceof TaskResponseException e2) throw e2;
                 throw e;
             }
         }
-
-        flowBack.sentTask(task);
-
-        if(path.equals(FlowTask.ECHO)){
-            flowBack.finishTask(task, 200, params);
-            return;
-        }
-
-        if(flowBridge.sendQueueEvent(task, method, path, headers, data, flowBack)){
-            return;
-        }
-        URI uri = new URI(path);
-        if(uri.getHost()==null){
-            uri = new URI(appConfig.getAppHost()).resolve(path);
-        }
-        Map<String, String> headers2 = new HashMap<>();
-        if(headers!=null) headers2.putAll(headers);
-        headers2.put(HeaderConverter.H_CASE_ID, task.getFlowCaseId());
-        headers2.put(HeaderConverter.H_ID, task.getId());
-        headers2.put("X-B3-TraceId", task.getFlowCaseId());
-        headers2.put("X-B3-SpanId", task.getId().substring(0,15)+"2");
-
-        LOGGER.info("http task {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
-        if(data!=null && flowDef.getLabels()!=null && flowDef.getLabels().containsKey("debug")){
-            LOGGER.info("data {}", new String(data));
-        } else if(data!=null && LOGGER.isDebugEnabled()){
-            LOGGER.debug("data {}", new String(data));
-        }
-        flowBack.sentTask(task);
-        if(blocked){
-            callbackRunner.callAsync(method, uri, headers2, data, HttpResponse.BodyHandlers.ofByteArray())
-                          .whenComplete((resp, e)-> completeCallBlocked(resp, e, task, flowBack));
-        } else {
-            String callbackPath = "/flow/response/"+ task.getId();
-            headers2.put(HeaderConverter.H_CALLBACK_URL, new URI(appConfig.getAppHost()).resolve(callbackPath).toString());
-            String apiKey = Hash.hmacSha1(task.getId().getBytes(StandardCharsets.UTF_8), taskApiKeySecret);
-            headers2.put(HeaderConverter.H_CALLBACK_PREFIX+"x-api-key", apiKey);
-
-            callbackRunner.callAsync(method, uri, headers2, data, HttpResponse.BodyHandlers.ofByteArray())
-                          .whenComplete((resp, e)-> completeCall(resp, e, task, flowBack));
-        }
-    }
-
-    private void completeCallBlocked(HttpResponse<byte[]> resp, Throwable e, FlowTaskEntity task, IFlowBack flowBack){
-        if (resp!=null && resp.statusCode() >= 200 && resp.statusCode()<=202) {
-            try {
-                Object root = objectMapper.readValue(resp.body(), Object.class);
-                flowBack.finishTask(task, resp.statusCode(), root);
-            }catch (Exception e2) {
-                flowBack.finishTask(task, 400, "response body invalid json "+e2.getMessage());
-            }
-        } else if (resp!=null) {
-            int status = Math.max(resp.statusCode(), 400);
-            flowBack.finishTask(task, resp.statusCode(), new String(resp.body(), StandardCharsets.UTF_8));
-        }
-        if(e!=null){
-            flowBack.finishTask(task, 500, "httpClient "+e.getMessage());
-        }
-    }
-
-    private void completeCall(HttpResponse<byte[]> resp, Throwable e, FlowTaskEntity task, IFlowBack flowBack){
-        if (resp!=null && resp.statusCode()>299) {
-            int status = Math.max(resp.statusCode(), 400);
-            flowBack.finishTask(task, resp.statusCode(), new String(resp.body(), StandardCharsets.UTF_8));
-        }
-        if(e!=null){
-            flowBack.finishTask(task, 500, "httpClient "+e.getMessage());
-        }
+        return new TaskHttpRequest(task.getId(), workerDef.getMethod(), path, headers, data, workerDef.isBlocked(), null);
     }
 
     @SuppressWarnings("unchecked")
