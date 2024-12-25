@@ -1,47 +1,39 @@
-code: flow1
-steps:
-  - code: step1
-    workers:
-      - code: worker_11
-        path: "http://localhost:8081/sum"
-        params:
-          $a: case.params.a
-          $b: case.params.b
+workers:
+  - name: worker_1
+    path: "http://localhost:8081/sum"
+    params:
+      $a: case.params.a
+      $b: case.params.b
 
-  - code: step2
-    workers:
 
-      - code: worker_21
-        path: "http://localhost:8081/sum"
-        method: POST
-        params:
-          $a: step.step1.worker_11.c
-          b: "2"
+  - name: step2/worker_21
+    path: "http://localhost:8081/sum"
+    method: POST
+    params:
+      $a: step.step1.worker_11.c
+      b: "2"
 
-      - code: worker_22
-        path: "http://localhost:8081/sum"
-        method: POST
-        blocked: true
-        params:
-          $a: worker_21.c
-          b: "3"
+  - name: step2/worker_22
+    path: "http://localhost:8081/sum"
+    method: POST
+    blocked: true
+    params:
+      $a: worker_21.c
+      b: "3"
 
-      - code: worker_23
-        path: "http://localhost:8081/sum"
-        method: POST
-        params:
-          $a: worker_22.c
-          $b: "4"
+  - name: step2/worker_23
+    path: "http://localhost:8081/sum"
+    method: POST
+    params:
+      $a: worker_22.c
+      $b: "4"
 
-  - code: step3
-    workers:
-
-      - code: worker_31
-        path: "http://localhost:8081/sum"
-        method: POST
-        params:
-          $a: step.step2.worker_23.c
-          b: "5"
+  - name: worker_31
+    path: "http://localhost:8081/sum"
+    method: POST
+    params:
+      $a: step.step2.worker_23.c
+      b: "5"
 
 response:
   $.: step.step3.worker_31.c

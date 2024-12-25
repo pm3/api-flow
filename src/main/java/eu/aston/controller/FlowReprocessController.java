@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
-import eu.aston.flow.def.FlowDef;
+import eu.aston.flow.def.IFlowDef;
 import eu.aston.flow.model.ClearCase;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowTask;
@@ -59,9 +59,9 @@ public class FlowReprocessController {
         if(flowCase.getFinished()==null){
             throw new UserException("case not finished, case="+id);
         }
-        FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
-                                      .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
+        IFlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
+                                       .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
+        flowDefStore.checkCaseAuth(flowDef, userContext);
 
         FlowCase finalCase = null;
         try{

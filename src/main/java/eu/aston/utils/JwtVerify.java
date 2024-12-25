@@ -41,8 +41,8 @@ public class JwtVerify {
         this.objectMapper = objectMapper;
     }
 
-    public void addIssuer(String issuer, String aud, String url, String tenant){
-        issuerConfigMap.put(issuer + "#" + aud, new IssuerCfg(issuer, aud, url, tenant));
+    public void addIssuer(String issuer, String aud, String url){
+        issuerConfigMap.put(issuer + "#" + aud, new IssuerCfg(issuer, aud, url));
     }
 
     public UserContext verify(DecodedJWT jwt) throws Exception {
@@ -53,7 +53,7 @@ public class JwtVerify {
         JWT.require(keyConfig.algorithm).withAudience(keyConfig.issuerConfig.aud()).build().verify(jwt);
         String user = jwt.getClaim("email").asString();
         if(user==null) user = jwt.getSubject();
-        return new UserContext(keyConfig.issuerConfig.tenant(), user);
+        return new UserContext(keyConfig.issuerConfig.issuer()+"#"+keyConfig.issuerConfig.aud(), user);
     }
 
     private void createVerifiers(String issuer, List<String> audiences) throws Exception {
@@ -95,7 +95,7 @@ public class JwtVerify {
         issuerConfigMap.clear();
     }
 
-    public record IssuerCfg(String issuer, String aud, String url, String tenant){}
+    public record IssuerCfg(String issuer, String aud, String url){}
 
     public record OpenIdKeys(List<OpenIdKey> keys){}
 

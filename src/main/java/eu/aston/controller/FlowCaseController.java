@@ -11,7 +11,7 @@ import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.WaitingFlowCaseManager;
-import eu.aston.flow.def.FlowDef;
+import eu.aston.flow.def.IFlowDef;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;
@@ -40,7 +40,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import ognl.Ognl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,37 +79,19 @@ public class FlowCaseController {
                               HttpRequest<Map<String, Object>> request,
                               @Parameter(hidden = true) UserContext userContext) {
         BaseValid.str(caseType, 1, 128, "caseType");
-        FlowDef flowDef = flowDefStore.flowDef(caseType)
-                .orElseThrow(()->new UserException("invalid case type, case="+caseType));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        IFlowDef flowDef = flowDefStore.flowDef(caseType)
+                                       .orElseThrow(()->new UserException("invalid case type, case="+caseType));
+        flowDefStore.checkCaseAuth(flowDef, userContext);
         Map<String, Object> params = request.getBody().orElse(new HashMap<>());
         List<String> assets = null;
-        if(flowDef.getParamsAssetExpr()!=null){
-            try{
-                Object val = Ognl.getValue(flowDef.getParamsAssetExpr(), params);
-                if(val instanceof List<?> l)
-                    assets = (List<String>) l.stream().filter(s -> s instanceof String).toList();
-                else if(val instanceof String s){
-                    assets = List.of(s);
-                }
-            }catch (Exception e){
-                throw new UserException("error read assets from params, case="+caseType);
-            }
+        if(params.get("assets") instanceof List l){
+            assets = l.stream().filter(e-> e instanceof String).toList();
         }
         String externalId = null;
-        if(flowDef.getParamsExternalIdExpr()!=null){
-            try{
-                Object val = Ognl.getValue(flowDef.getParamsExternalIdExpr(), params);
-                if(val instanceof String s){
-                    externalId = s;
-                } else if(val instanceof Number n){
-                    externalId = n.toString();
-                }
-            }catch (Exception e){
-                throw new UserException("error read externalId from params, case="+caseType);
-            }
-            BaseValid.str(externalId, -1, 128, "externalId");
+        if(params.get("externalId") instanceof String s) {
+            externalId = s;
         }
+        BaseValid.str(externalId, -1, 128, "externalId");
         Callback callback = HeaderConverter.createCallback(request.getHeaders());
         FlowCaseCreate create = new FlowCaseCreate(caseType, externalId, assets, params, callback);
         String caseId = ID.newId();
@@ -126,9 +107,9 @@ public class FlowCaseController {
         BaseValid.str(caseCreate.caseType(), 1, 128, "type");
         BaseValid.str(caseCreate.externalId(), -1, 128, "externalId");
 
-        FlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
-                .orElseThrow(()->new UserException("invalid case type, case="+caseCreate.caseType()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        IFlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
+                                       .orElseThrow(()->new UserException("invalid case type, case="+caseCreate.caseType()));
+        flowDefStore.checkCaseAuth(flowDef, userContext);
         String caseId = ID.newId();
         LOGGER.info("start flow {} {}", caseCreate.caseType(), caseId);
         flowCaseManager.createFlow(caseId, caseCreate);
@@ -147,9 +128,9 @@ public class FlowCaseController {
         if(flowCase==null){
             throw new UserException("case not found, case="+id);
         }
-        FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
-                .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
+        IFlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
+                                       .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
+        flowDefStore.checkCaseAuth(flowDef, userContext);
 
         if (waitTimeSeconds!=null && waitTimeSeconds>0 && flowCase.getFinished()==null) {
             if(waitTimeSeconds>55) waitTimeSeconds = 55;
@@ -208,9 +189,9 @@ public class FlowCaseController {
         if (fileName != null && !fileName.matches("^[A-Za-z0-9-_,\\s]{1,60}[.]{1}[A-Za-z0-9]{3,4}$"))
             fileName = null;
 
-        FlowDef flowDef = flowDefStore.flowDef(caseType)
-                .orElseThrow(()->new UserException("invalid case type, case="+caseType));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        IFlowDef flowDef = flowDefStore.flowDef(caseType)
+                                       .orElseThrow(()->new UserException("invalid case type, case="+caseType));
+        flowDefStore.checkCaseAuth(flowDef, userContext);
 
         String assetId = ID.newId();
         try{

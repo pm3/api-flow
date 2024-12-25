@@ -10,7 +10,6 @@ import eu.aston.micronaut.sql.entity.Table;
 public class FlowTaskEntity {
     private String id;
     private String flowCaseId;
-    private String step;
     private String worker;
     private int stepIndex;
 
@@ -27,10 +26,9 @@ public class FlowTaskEntity {
     public FlowTaskEntity() {
     }
 
-    public FlowTaskEntity(String id, String flowCaseId, String step, String worker, int stepIndex) {
+    public FlowTaskEntity(String id, String flowCaseId, String worker, int stepIndex) {
         this.id = id;
         this.flowCaseId = flowCaseId;
-        this.step = step;
         this.worker = worker;
         this.stepIndex = stepIndex;
     }
@@ -49,14 +47,6 @@ public class FlowTaskEntity {
 
     public void setFlowCaseId(String flowCaseId) {
         this.flowCaseId = flowCaseId;
-    }
-
-    public String getStep() {
-        return step;
-    }
-
-    public void setStep(String step) {
-        this.step = step;
     }
 
     public String getWorker() {
@@ -133,6 +123,6 @@ public class FlowTaskEntity {
 
     @Override
     public String toString() {
-        return "Task "+step+"/"+worker+" case="+flowCaseId+" id="+id;
+        return "Task "+worker+" case="+flowCaseId+" id="+id;
     }
 }

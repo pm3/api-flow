@@ -16,8 +16,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.aston.flow.def.FlowDef;
 import eu.aston.flow.def.FlowWorkerDef;
+import eu.aston.flow.def.IFlowDef;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.utils.ID;
@@ -118,7 +118,7 @@ public class ZipkinSpanSender implements ISpanSender {
     }
 
     @Override
-    public void finishFlow(FlowCaseEntity flowCase, FlowDef flowDef, String error) {
+    public void finishFlow(FlowCaseEntity flowCase, IFlowDef flowDef, String error) {
         ZipkinSpan span = new ZipkinSpan();
         span.setTraceId(flowCase.getId());
         span.setName("flow");
@@ -151,7 +151,7 @@ public class ZipkinSpanSender implements ISpanSender {
         span.setId(task.getId().substring(0,15)+"1");
         span.setParentId(task.getId().substring(0,15)+"0");
         span.setTimestamp(task.getCreated().toEpochMilli()*1000);
-        span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getStep()+"/"+task.getWorker()));
+        span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getWorker()));
         cacheAdd(span);
     }
 
@@ -166,17 +166,14 @@ public class ZipkinSpanSender implements ISpanSender {
         span.setId(task.getId().substring(0,15)+"0");
         span.setTimestamp(task.getCreated().toEpochMilli()*1000);
         span.setDuration(Duration.between(task.getCreated(), task.getFinished()).toMillis()*1000);
-        span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getStep()+"/"+task.getWorker()));
+        span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getWorker()));
         span.setTags(new HashMap<>());
         if(workerDef.getLabels()!=null && !workerDef.getLabels().isEmpty()){
             span.getTags().putAll(workerDef.getLabels());
         }
-        span.getTags().put("step", task.getStep());
+        span.getTags().put("step", task.getWorker().split("/")[0]);
         if(task.getStepIndex()>=0) span.getTags().put("StepIndex", String.valueOf(task.getStepIndex()));
-        span.getTags().put("worker", workerDef.getCode());
-        if(workerDef.getLabels()!=null){
-            workerDef.getLabels().forEach((k,v)->span.getTags().put("worker."+k, v));
-        }
+        span.getTags().put("worker", task.getWorker());
         if(task.getError()!=null){
             span.getTags().put("error", task.getError());
             span.setName(span.getName()+" error");

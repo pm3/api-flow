@@ -5,7 +5,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class FlowWorkerDef {
-    private String code;
+    private String name;
     private String path;
     @JsonProperty(value = "$path")
     private String pathExpr;
@@ -17,12 +17,12 @@ public class FlowWorkerDef {
     private boolean blocked;
     private Integer timeout;
 
-    public String getCode() {
-        return code;
+    public String getName() {
+        return name;
     }
 
-    public void setCode(String code) {
-        this.code = code;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getPath() {
@@ -99,6 +99,6 @@ public class FlowWorkerDef {
 
     @Override
     public String toString() {
-        return "FlowWorkerDef{" + "code='" + code + '\'' + ", path='" + path + '\'' + '}';
+        return "FlowWorkerDef{" + "name='" + name + '\'' + ", path='" + path + '\'' + '}';
     }
 }

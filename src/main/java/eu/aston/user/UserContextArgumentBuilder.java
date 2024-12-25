@@ -1,7 +1,6 @@
 package eu.aston.user;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -23,8 +22,8 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class UserContextArgumentBuilder implements TypedRequestArgumentBinder<UserContext> {
 
-    public static final String BASIC_ = "Basic ";
     public static final String BEARER_ = "Bearer ";
+    public static final String X_API_KEY = "X-Api-Key";
 
     @Override
     public Argument<UserContext> argumentType() {
@@ -57,15 +56,6 @@ public class UserContextArgumentBuilder implements TypedRequestArgumentBinder<Us
         }
 
         String auth = source.getHeaders().get(HttpHeaders.AUTHORIZATION);
-        if (auth != null && auth.startsWith(BASIC_)) {
-            String basic = new String(Base64.getDecoder().decode(auth.substring(BASIC_.length())));
-            String[] items = basic.split(":", 2);
-            UserContext userContext = flowDefStore.baseAuth(items[0], items[1]);
-            if(userContext==null){
-                throw new AuthException("invalid base auth", true);
-            }
-            return () -> Optional.of(userContext);
-        }
         if (auth != null && auth.startsWith(BEARER_)) {
             try {
                 DecodedJWT jwt = JWT.decode(auth.substring(BEARER_.length()));
@@ -76,7 +66,7 @@ public class UserContextArgumentBuilder implements TypedRequestArgumentBinder<Us
                 throw new AuthException("invalid bearer jwt token " + e.getMessage(), true);
             }
         }
-        String xApiKey = source.getHeaders().get("X-Api-Key");
+        String xApiKey = source.getHeaders().get(X_API_KEY);
         if (xApiKey!=null) {
             if(workerApiKey!=null){
                 String pathKey = Hash.hmacSha1(source.getPath().getBytes(StandardCharsets.UTF_8), workerApiKey);
@@ -84,11 +74,10 @@ public class UserContextArgumentBuilder implements TypedRequestArgumentBinder<Us
                     throw new AuthException("invalid api key", true);
                 }
             }
-            UserContext userContext = new UserContext(null, "API-KEY");
+            UserContext userContext = new UserContext(xApiKey, xApiKey);
             return () -> Optional.of(userContext);
         }
 
         return ()->Optional.of(new UserContext(null, null));
-        //throw new AuthException("authorization required", false);
     }
 }

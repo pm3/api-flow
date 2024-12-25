@@ -9,7 +9,6 @@ import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.AppConfig;
-import eu.aston.flow.QueueFlowBridge;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.header.CallbackRunner;
@@ -26,15 +25,13 @@ public class TaskExecutor {
     private final ObjectMapper objectMapper;
     private final CallbackRunner callbackRunner;
     private final AppConfig appConfig;
-    private final QueueFlowBridge flowBridge;
     private final byte[] taskApiKeySecret;
 
     public TaskExecutor(ObjectMapper objectMapper, CallbackRunner callbackRunner,
-                        AppConfig appConfig, QueueFlowBridge flowBridge) {
+                        AppConfig appConfig) {
         this.objectMapper = objectMapper;
         this.callbackRunner = callbackRunner;
         this.appConfig = appConfig;
-        this.flowBridge = flowBridge;
         this.taskApiKeySecret = appConfig.getTaskApiKeySecret().getBytes(StandardCharsets.UTF_8);
     }
 
@@ -44,12 +41,11 @@ public class TaskExecutor {
             finishTask.accept(200, params);
             return;
         }
-        if(flowBridge.queueEvent(request.path())){
-            flowBridge.sendQueueEvent(task, request, handleSend, finishTask);
-            return;
-        }
         URI uri = new URI(request.path());
-        if(uri.getHost()==null){
+        if(uri.getHost()==null && uri.getPath().startsWith("/queue/")){
+            Map<String, String> headers2 = HeaderConverter.queueRequest(request);
+            request = new TaskHttpRequest(request.taskId(), "POST", appConfig.getQueueHost()+uri.getPath(), headers2 , request.body(), false, null);
+        } else if(uri.getHost()==null){
             uri = new URI(appConfig.getAppHost()).resolve(request.path());
         }
         Map<String, String> headers2 = new HashMap<>();

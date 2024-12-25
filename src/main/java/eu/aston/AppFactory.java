@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.blob.AzureBlobAuthBuilder;
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowDefStore;
-import eu.aston.flow.nodejs.NodeJsFlowExecutor;
+import eu.aston.flow.IFlowFactory;
 import eu.aston.utils.JwtVerify;
 import eu.aston.utils.SuperTimer;
 import io.micronaut.context.annotation.Factory;
@@ -49,12 +49,10 @@ public class AppFactory {
     }
 
     @Singleton
-    public FlowDefStore flowDefStore(HttpClient httpClient,
-                                     ObjectMapper objectMapper,
-                                     @Value("${app.rootDir}") File root,
+    public FlowDefStore flowDefStore(@Value("${app.rootDir}") File root,
                                      JwtVerify jwtVerify,
-                                     NodeJsFlowExecutor nodeJsFlowExecutor){
-        FlowDefStore flowDefStore = new FlowDefStore(httpClient, objectMapper, jwtVerify, nodeJsFlowExecutor);
+                                     IFlowFactory[] flowFactories){
+        FlowDefStore flowDefStore = new FlowDefStore(jwtVerify, flowFactories);
         flowDefStore.setDefaultTimeout(120);
         flowDefStore.loadRoot(root, false);
         return flowDefStore;

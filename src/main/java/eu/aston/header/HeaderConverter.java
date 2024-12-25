@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import eu.aston.flow.task.TaskHttpRequest;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.http.HttpHeaders;
 
@@ -61,5 +62,10 @@ public class HeaderConverter {
             callback = new Callback(callbackUrl, callbackHeaders);
         }
         return callback;
+    }
+
+    public static Map<String, String> queueRequest(TaskHttpRequest request) {
+        Map<String, String> map = new HashMap<>();
+        return map;
     }
 }
