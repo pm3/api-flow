@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.store.FlowCaseEntity;
+import eu.aston.flow.store.FlowRequestEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.utils.ID;
 import eu.aston.utils.SuperTimer;
@@ -156,7 +157,7 @@ public class ZipkinSpanSender implements ISpanSender {
     }
 
     @Override
-    public void finishTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowWorkerDef workerDef) {
+    public void finishTask(FlowCaseEntity flowCase, FlowTaskEntity task, FlowRequestEntity request) {
         if(task.getQueueSent()!=null){
             finishWaitingTask(flowCase, task);
         }
@@ -168,9 +169,6 @@ public class ZipkinSpanSender implements ISpanSender {
         span.setDuration(Duration.between(task.getCreated(), task.getFinished()).toMillis()*1000);
         span.setLocalEndpoint(new ZipkinEndpoint("/flow/"+flowCase.getCaseType()+"/"+task.getWorker()));
         span.setTags(new HashMap<>());
-        if(workerDef.getLabels()!=null && !workerDef.getLabels().isEmpty()){
-            span.getTags().putAll(workerDef.getLabels());
-        }
         span.getTags().put("step", task.getWorker().split("/")[0]);
         if(task.getStepIndex()>=0) span.getTags().put("StepIndex", String.valueOf(task.getStepIndex()));
         span.getTags().put("worker", task.getWorker());
@@ -178,8 +176,10 @@ public class ZipkinSpanSender implements ISpanSender {
             span.getTags().put("error", task.getError());
             span.setName(span.getName()+" error");
         }
-        span.getTags().put("http.method", workerDef.getMethod());
-        span.getTags().put("http.path", workerDef.getPath()!=null? workerDef.getPath() : workerDef.getPathExpr());
+        if(request!=null){
+            span.getTags().put("http.method", request.getMethod());
+            span.getTags().put("http.path", request.getPath());
+        }
         span.getTags().put("http.status_code", String.valueOf(task.getResponseCode()));
         cacheAdd(span);
     }

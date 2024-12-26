@@ -173,8 +173,8 @@ public class FlowCaseManager {
             task.setError(error);
         }
 
-        FlowWorkerDef workerDef = flowDef.worker(task.getWorker());
-        spanSender.finishTask(flowCase, task, workerDef);
+        FlowRequestEntity request = requestStore.loadById(task.getId());
+        spanSender.finishTask(flowCase, task, request);
         flowThreadPool.addCase(task.getFlowCaseId(), task.getId());
     }
 

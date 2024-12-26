@@ -17,8 +17,6 @@ public interface IFlowDef {
     List<String> getAuthApiKeys();
 
     List<JwtIssuerDef> getAuthJwtIssuers();
-
-    FlowWorkerDef worker(String name);
-
+    
     List<TaskHttpRequest> execTick(FlowCaseEntity flowCase, List<FlowTaskEntity> tasks);
 }
