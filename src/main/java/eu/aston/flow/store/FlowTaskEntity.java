@@ -123,6 +123,6 @@ public class FlowTaskEntity {
 
     @Override
     public String toString() {
-        return "Task "+worker+" case="+flowCaseId+" id="+id;
+        return "Task "+worker+" case="+flowCaseId+" id="+id+" state="+responseCode;
     }
 }

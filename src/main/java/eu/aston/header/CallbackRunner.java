@@ -29,18 +29,18 @@ public class CallbackRunner {
         this.superTimer = superTimer;
     }
 
-    public <T> HttpResponse<T> call(String method, URI uri, Map<String, String> headers, Object body, HttpResponse.BodyHandler<T> bodyHandler) throws Exception{
+    public HttpResponse<byte[]> call(String method, URI uri, Map<String, String> headers, Object body) throws Exception{
         HttpRequest.Builder b = HttpRequest.newBuilder(uri);
         if(headers!=null) headers.forEach(b::header);
         b.method(method, createBodyPublisher(body));
-        return httpClient.send(b.build(), bodyHandler);
+        return httpClient.send(b.build(), HttpResponse.BodyHandlers.ofByteArray());
     }
 
-    public <T> CompletableFuture<HttpResponse<T>> callAsync(String method, URI uri, Map<String, String> headers, Object body, HttpResponse.BodyHandler<T> bodyHandler){
-        CompletableFuture<HttpResponse<T>> future = new CompletableFuture<>();
+    public CompletableFuture<HttpResponse<byte[]>> callAsync(String method, URI uri, Map<String, String> headers, Object body){
+        CompletableFuture<HttpResponse<byte[]>> future = new CompletableFuture<>();
         superTimer.execute(()->{
             try{
-                HttpResponse<T> response = call(method, uri, headers, body, bodyHandler);
+                HttpResponse<byte[]> response = call(method, uri, headers, body);
                 LOGGER.debug("send {} {} response {}", method, uri, response.statusCode());
                 future.complete(response);
             }catch (Exception e){

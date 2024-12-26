@@ -11,14 +11,16 @@ import java.util.stream.Collectors;
 
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.def.FlowWorkerDef;
-import eu.aston.flow.def.IFlowDef;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;
+import eu.aston.flow.model.FlowRequest;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.store.FlowCaseEntity;
+import eu.aston.flow.store.FlowRequestEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.store.IFlowCaseStore;
+import eu.aston.flow.store.IFlowRequestStore;
 import eu.aston.flow.store.IFlowTaskStore;
 import eu.aston.flow.task.TaskExecutor;
 import eu.aston.flow.task.TaskHttpRequest;
@@ -43,6 +45,7 @@ public class FlowCaseManager {
     private final BlobStore blobStore;
     private final IFlowCaseStore caseStore;
     private final IFlowTaskStore taskStore;
+    private final IFlowRequestStore requestStore;
     private final FlowDefStore flowDefStore;
     private final WaitingFlowCaseManager waitingFlowCaseManager;
     private final ISpanSender spanSender;
@@ -53,7 +56,7 @@ public class FlowCaseManager {
 
     public FlowCaseManager(BlobStore blobStore,
                            IFlowCaseStore caseStore,
-                           IFlowTaskStore taskStore,
+                           IFlowTaskStore taskStore, IFlowRequestStore requestStore,
                            FlowDefStore flowDefStore,
                            WaitingFlowCaseManager waitingFlowCaseManager,
                            ISpanSender spanSender,
@@ -62,6 +65,7 @@ public class FlowCaseManager {
         this.blobStore = blobStore;
         this.caseStore = caseStore;
         this.taskStore = taskStore;
+        this.requestStore = requestStore;
         this.flowDefStore = flowDefStore;
         this.waitingFlowCaseManager = waitingFlowCaseManager;
         this.spanSender = spanSender;
@@ -212,7 +216,7 @@ public class FlowCaseManager {
                 finishTask(flowDef, flowCase, task, statusCode, message);
             } else {
                 try{
-                    Runnable handleSend = ()->sentTask(task);
+                    Runnable handleSend = ()->sentTask(task, request);
                     BiConsumer<Integer, Object> finishTask = (state, resp) -> finishTask(flowDef, flowCase, task, state, resp);
                     boolean debug = flowDef.getLabels()!=null && flowDef.getLabels().containsKey("debug");
                     taskExecutor.execute(request, task, handleSend, finishTask, true);
@@ -223,7 +227,7 @@ public class FlowCaseManager {
         }
     }
 
-    public void sentTask(FlowTaskEntity task) {
+    public void sentTask(FlowTaskEntity task, TaskHttpRequest request) {
         if(task.getCreated()==null){
             task.setCreated(Instant.now());
             taskStore.insert(task);
@@ -231,6 +235,7 @@ public class FlowCaseManager {
                 superTimer.schedule(task.getTimeout()*1000L, task.getId(), this::taskTimeout);
             }
         }
+        requestStore.insert(new FlowRequestEntity(task.getId(), task.getFlowCaseId(), request.method(), request.path(), request.body()));
     }
 
     public void finishTask(IFlowDef flowDef, FlowCaseEntity flowCase, FlowTaskEntity task, int statusCode, Object response) {
@@ -260,6 +265,11 @@ public class FlowCaseManager {
         //save to blob and clean db
         FlowCase flowCase = caseStore.loadFlowCaseById(flowCaseEntity.getId());
         flowCase.setTasks(taskStore.selectFlowTaskByCaseId(flowCaseEntity.getId()));
+        Map<String, FlowRequest> requests = requestStore.selectByCaseId(flowCaseEntity.getId())
+                .stream().collect(Collectors.toMap(FlowRequestEntity::getId, r->new FlowRequest(r.getMethod(), r.getPath(), r.getBody())));
+        for (FlowTask task : flowCase.getTasks()) {
+            task.setRequest(requests.get(task.getId()));
+        }
         Callback callback = flowCase.getCallback();
         flowCase.setCallback(null);
         try{

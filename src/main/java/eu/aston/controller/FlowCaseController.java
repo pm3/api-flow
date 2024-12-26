@@ -11,7 +11,7 @@ import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.WaitingFlowCaseManager;
-import eu.aston.flow.def.IFlowDef;
+import eu.aston.flow.IFlowDef;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;

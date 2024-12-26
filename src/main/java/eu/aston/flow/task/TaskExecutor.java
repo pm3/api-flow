@@ -63,7 +63,7 @@ public class TaskExecutor {
         }
         handleSend.run();
         if(request.blocked()){
-            callbackRunner.callAsync(request.method(), uri, headers2, request.body(), HttpResponse.BodyHandlers.ofByteArray())
+            callbackRunner.callAsync(request.method(), uri, headers2, request.body())
                           .whenComplete((resp, e)-> completeCallBlocked(finishTask, resp, e, task));
         } else {
             String callbackPath = "/flow/response/"+ task.getId();
@@ -71,7 +71,7 @@ public class TaskExecutor {
             String apiKey = Hash.hmacSha1(task.getId().getBytes(StandardCharsets.UTF_8), taskApiKeySecret);
             headers2.put(HeaderConverter.H_CALLBACK_PREFIX+"x-api-key", apiKey);
 
-            callbackRunner.callAsync(request.method(), uri, headers2, request.body(), HttpResponse.BodyHandlers.ofByteArray())
+            callbackRunner.callAsync(request.method(), uri, headers2, request.body())
                           .whenComplete((resp, e)-> completeCall(finishTask, resp, e, task));
         }
     }

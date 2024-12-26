@@ -8,8 +8,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import ognl.MapPropertyAccessor;
 import ognl.Ognl;
+import ognl.OgnlContext;
 import ognl.OgnlException;
+import ognl.OgnlRuntime;
+import ognl.PropertyAccessor;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class FlowScript {
@@ -21,6 +25,7 @@ public class FlowScript {
     public FlowScript(Map<String, Object> root) {
         this.root = root!=null ? root : new HashMap<>();
         this.ctx = Ognl.createDefaultContext(this.root);
+        OgnlRuntime.setPropertyAccessor(Map.class, new LazyMapAccesor());
     }
 
     public boolean execWhere(String expr) throws OgnlException {
@@ -109,19 +114,33 @@ public class FlowScript {
         }
     }
 
-    public static class LazyMap extends HashMap<String, Object> {
+    public static class LazyMapAccesor implements PropertyAccessor {
+
+        PropertyAccessor wrapped = new MapPropertyAccessor();
         @Override
-        public Object get(Object key) {
-            Object val = super.get(key);
-            if(val instanceof RuntimeException ex) throw ex;
-            return val;
+        public Object getProperty(Map context, Object target, Object name) throws OgnlException {
+            if(target instanceof Map<?,?> map){
+                Object val = map.get(name);
+                if(val instanceof RuntimeException expr){
+                    throw expr;
+                }
+            }
+            return wrapped.getProperty(context, target, name);
         }
 
         @Override
-        public Set<Entry<String, Object>> entrySet() {
-            return super.entrySet().stream()
-                        .filter(e->!(e.getValue() instanceof Exception))
-                        .collect(Collectors.toSet());
+        public void setProperty(Map context, Object target, Object name, Object value) throws OgnlException {
+            wrapped.setProperty(context, target, name, value);
+        }
+
+        @Override
+        public String getSourceAccessor(OgnlContext context, Object target, Object index) {
+            return "";
+        }
+
+        @Override
+        public String getSourceSetter(OgnlContext context, Object target, Object index) {
+            return "";
         }
     }
 }

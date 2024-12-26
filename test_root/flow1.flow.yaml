@@ -1,42 +1,41 @@
 workers:
   - name: worker_1
-    path: "http://localhost:8081/sum"
+    path: "http://localhost:8081/worker_1"
     params:
-      $a: case.params.a
-      $b: case.params.b
-
+      $a: case.params.a + 1
+      b: 2
 
   - name: step2/worker_21
-    path: "http://localhost:8081/sum"
+    path: "http://localhost:8081/step2/worker_21"
     method: POST
     params:
-      $a: step.step1.worker_11.c
-      b: "2"
+      $a: worker.worker_1.a + 1
+      b: 3
 
   - name: step2/worker_22
-    path: "http://localhost:8081/sum"
+    path: "http://localhost:8081/step2/worker_22"
     method: POST
     blocked: true
     params:
-      $a: worker_21.c
-      b: "3"
+      $a: worker_21.a + 1
+      b: 4
 
   - name: step2/worker_23
-    path: "http://localhost:8081/sum"
+    path: "http://localhost:8081/step2/worker_23"
     method: POST
     params:
-      $a: worker_22.c
-      $b: "4"
+      $a: worker_21.a + 1
+      b: 4
 
-  - name: worker_31
-    path: "http://localhost:8081/sum"
+  - name: worker_3
+    path: "http://localhost:8081/worker_3"
     method: POST
     params:
-      $a: step.step2.worker_23.c
-      b: "5"
+      $a: worker.step2.worker_22.a + worker.step2.worker_23.a
+      b: 8
 
 response:
-  $.: step.step3.worker_31.c
+  $a: worker.worker_3.a
 
 labels:
   label1: label1

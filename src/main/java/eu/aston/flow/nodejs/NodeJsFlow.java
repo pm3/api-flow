@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.def.FlowWorkerDef;
-import eu.aston.flow.def.IFlowDef;
+import eu.aston.flow.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
@@ -69,9 +69,8 @@ public class NodeJsFlow implements IFlowDef {
     public List<TaskHttpRequest> execTick(FlowCaseEntity flowCase, List<FlowTaskEntity> tasks) {
         try {
             byte[] body = objectMapper.writeValueAsBytes(new NodeJsFlowRequest(flowCase, tasks));
-            HttpResponse<String> response = callbackRunner.call("POST", URI.create(nodeUri+"/case"),
-                                                                Map.of("Content-Type", "application/json"), body,
-                                                                HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> response = callbackRunner.call("POST", URI.create(nodeUri+"/case"),
+                                                                Map.of("Content-Type", "application/json"), body);
             if (response.statusCode() == 200) {
                 return objectMapper.readValue(response.body(), objectMapper.getTypeFactory().constructCollectionType(List.class,TaskHttpRequest.class));
             }
@@ -83,13 +82,12 @@ public class NodeJsFlow implements IFlowDef {
     }
 
     private void parseFlowScript() throws Exception {
-        HttpResponse<String> response = callbackRunner.call("POST", URI.create(nodeUri+"/flow"), null, flowJs,
-                                                            HttpResponse.BodyHandlers.ofString());
+        HttpResponse<byte[]> response = callbackRunner.call("POST", URI.create(nodeUri+"/flow"), null, flowJs);
         if (response.statusCode() == 200) {
             this.flowData = objectMapper.readValue(response.body(), NodeJsFlowData.class);
             this.workerMap = flowData.workers().stream().collect(Collectors.toMap(FlowWorkerDef::getName, Function.identity()));
             return;
         }
-        throw new Exception("initJsFlowDef error "+response.body());
+        throw new Exception("initJsFlowDef error "+new String(response.body()));
     }
 }

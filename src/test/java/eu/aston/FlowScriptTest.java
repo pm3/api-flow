@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 public class FlowScriptTest {
 
     private static FlowScript createCtx(){
-        Map<String, Object> root = new FlowScript.LazyMap();
+        Map<String, Object> root = new HashMap<>();
         root.put("a", "a");
         root.put("b", 1);
         root.put("c", Map.of("c1", "c1", "c2", "c2"));

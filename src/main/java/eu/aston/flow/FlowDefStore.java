@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
-import eu.aston.flow.def.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.user.AuthException;
 import eu.aston.user.UserContext;

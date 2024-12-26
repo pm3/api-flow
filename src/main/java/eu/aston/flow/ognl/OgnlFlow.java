@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.def.FlowWorkerDef;
-import eu.aston.flow.def.IFlowDef;
+import eu.aston.flow.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.store.FlowCaseEntity;
@@ -38,7 +38,6 @@ public class OgnlFlow implements IFlowDef {
     public OgnlFlow(String code, OgnlFlowData flowData, ObjectMapper objectMapper, int defaultTimeout) {
         this.code = code;
         this.flowData = flowData;
-        this.workerMap = flowData.workers().stream().collect(Collectors.toMap(FlowWorkerDef::getName, Function.identity()));
         this.objectMapper = objectMapper;
         this.defaultTimeout = defaultTimeout;
 
@@ -49,12 +48,16 @@ public class OgnlFlow implements IFlowDef {
             w1.setParams(flowData.response());
             flowData.workers().add(w1);
         }
+        LOGGER.debug("tasks {}", flowData.workers());
 
+        this.workerMap = flowData.workers().stream().collect(Collectors.toMap(FlowWorkerDef::getName, Function.identity()));
         this.steps = flowSteps(flowData.workers());
+        LOGGER.debug("steps {}", steps);
         this.iterableSteps = steps.stream()
                                   .filter(s->s.endsWith("/_iterator"))
                                   .map(OgnlFlow::step)
                                   .collect(Collectors.toSet());
+        LOGGER.debug("iterableSteps {}", iterableSteps);
     }
 
     @Override
@@ -90,6 +93,7 @@ public class OgnlFlow implements IFlowDef {
             return List.of();
         }
         if (aktStep.equals(FlowCase.FINISHED)){
+            flowCase.setState(FlowCase.FINISHED);
             return List.of(new TaskHttpRequest(FlowCase.FINISHED, FlowCase.FINISHED, FlowCase.FINISHED, null, null, true, FlowCase.FINISHED));
         }
 
@@ -99,17 +103,19 @@ public class OgnlFlow implements IFlowDef {
                                                               .filter(t->t.getFinished()==null && t.getCreated()==null)
                                                               .collect(Collectors.groupingBy(FlowTaskEntity::getStepIndex));
 
-        openedTasks.forEach((stepIndex, openTasks)->execTickStep(aktStep, stepIndex, flowCase, openTasks, workerContext, requests));
+        for (Map.Entry<Integer, List<FlowTaskEntity>> entry : openedTasks.entrySet()) {
+            execTickStep(aktStep, entry.getKey(), flowCase, entry.getValue(), workerContext, requests);
+        }
         return requests;
     }
 
+    @SuppressWarnings("unchecked")
     private Map<String, Object> createWorkerContext(List<FlowTaskEntity> tasks) {
         Map<String, Object> workerMap = new HashMap<>();
         for(FlowTaskEntity t : tasks){
             String[] items = t.getWorker().split("/");
-            Map<String, Object> stepMap = items.length>1 ?
-                                         (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k)->new HashMap<>())
-                                               : workerMap;
+            Map<String, Object> stepMap = items.length <= 1 ? workerMap
+                : (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k) -> new StepMap());
             String workerName = items.length>1 ? items[1] : items[0];
             if(iterableSteps.contains(items[0])){
                 taskToMap(stepMap, workerName, t, t.getStepIndex());
@@ -176,11 +182,11 @@ public class OgnlFlow implements IFlowDef {
         LOGGER.debug("next tick {}",flowCase.getId());
         LOGGER.debug("opened tasks {}", openTasks.stream().map(FlowTaskEntity::getWorker).toList());
 
-        Map<String, Object> root = new FlowScript.LazyMap();
+        Map<String, Object> root = new HashMap<>();
         root.put("case", flowCase);
         root.put("worker", workerContext);
-        if(workerContext.get(stepCode) instanceof FlowScript.LazyMap stepMap){
-            root.put(stepCode, stepMap);
+        if(workerContext.get(stepCode) instanceof StepMap stepMap){
+            root.putAll(stepMap);
         }
 
         LOGGER.debug("root {}", root);
@@ -213,7 +219,7 @@ public class OgnlFlow implements IFlowDef {
 
         String error = null;
         try{
-            return sendTask(flowScript, workerDef, flowCase, task);
+            return createTaskRequest(flowScript, workerDef, flowCase, task);
         }catch (WaitingException e) {
             return null;
         }catch (TaskResponseException e) {
@@ -233,7 +239,7 @@ public class OgnlFlow implements IFlowDef {
     }
 
     @SuppressWarnings("rawtypes")
-    private TaskHttpRequest sendTask(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task) throws Exception {
+    private TaskHttpRequest createTaskRequest(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task) throws Exception {
 
         String path = workerDef.getPath();
 
@@ -299,7 +305,6 @@ public class OgnlFlow implements IFlowDef {
                 if(!steps.contains(step)) steps.add(step);
             }
         }
-        LOGGER.debug("steps {}", steps);
         return steps;
     }
 
@@ -313,5 +318,8 @@ public class OgnlFlow implements IFlowDef {
     public static String step(String name){
         int pos = name.indexOf('/');
         return pos>0 ? name.substring(0, pos) : name;
+    }
+
+    public static class StepMap extends HashMap<String, Object>{
     }
 }

@@ -26,6 +26,8 @@ public class FlowTask {
     private Instant created;
     private Instant finished;
 
+    private FlowRequest request;
+
     public String getId() {
         return id;
     }
@@ -96,6 +98,14 @@ public class FlowTask {
 
     public void setFinished(Instant finished) {
         this.finished = finished;
+    }
+
+    public FlowRequest getRequest() {
+        return request;
+    }
+
+    public void setRequest(FlowRequest request) {
+        this.request = request;
     }
 
     @Override

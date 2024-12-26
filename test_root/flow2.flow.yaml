@@ -1,51 +1,47 @@
-code: flow2
-steps:
-  - code: init
-    workers:
-      - code: prepare
-        path: /flow/sum
-        method: POST
-        params:
-          $a: case.params.a
-          $b: case.params.b
+workers:
+  - name: worker_1
+    path: "http://localhost:8081/worker_1"
+    params:
+      $a: case.params.a + 1
+      b: 2
 
-  - code: photos
-    workers:
+  - name: step2/_iterator
+    path: "echo"
+    params:
+      $.: case.params.items
 
-      - code: _iterator
-        params:
-          $items: case.assets
+  - name: step2/worker_21
+    path: "http://localhost:8081/step2/worker_21"
+    method: POST
+    params:
+      $a: worker.worker_1.a + 1
+      b: 3
 
-      - code: worker_1
-        path: /flow/sum
-        method: POST
-        params:
-          $a: step.init.prepare.c
-          b: "2"
-          $asset: asset.url
+  - name: step2/worker_22
+    path: "http://localhost:8081/step2/worker_22"
+    method: POST
+    blocked: true
+    params:
+      $a: worker_21.a + 1
+      b: 4
 
-      - code: worker_2
-        path: /flow/sum
-        method: POST
-        params:
-          $a: worker_1.c
-          b: "3"
+  - name: step2/worker_23
+    path: "http://localhost:8081/step2/worker_23"
+    method: POST
+    params:
+      $a: worker_21.a + 1
+      b: 4
 
-  - code: finish
-    workers:
-
-      - code: calculate
-        path: /flow/sum
-        method: POST
-        params:
-          $a: case.params.a
-          $b: case.params.b
+  - name: worker_3
+    path: "http://localhost:8081/worker_3"
+    method: POST
+    params:
+      $a: worker.step2.0.worker_22.a + worker.step2.1.worker_22.a + worker.step2.2.worker_22.a
+      b: 8
 
 response:
-  $sum: finish.calculate
+  $a: worker.worker_3.a
 
 labels:
   label1: label1
   label2: label2
-paramsAssetExpr: asset
-paramsExternalIdExpr: externalId

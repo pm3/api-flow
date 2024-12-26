@@ -1,8 +1,10 @@
-package eu.aston.flow.def;
+package eu.aston.flow;
 
 import java.util.List;
 import java.util.Map;
 
+import eu.aston.flow.def.FlowWorkerDef;
+import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.task.TaskHttpRequest;
