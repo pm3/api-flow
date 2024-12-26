@@ -4,11 +4,8 @@ import java.net.URI;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.store.FlowCaseEntity;

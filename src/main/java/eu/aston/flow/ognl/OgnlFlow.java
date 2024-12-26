@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.model.FlowCase;
@@ -29,7 +28,7 @@ public class OgnlFlow implements IFlowDef {
 
     private final String code;
     private final OgnlFlowData flowData;
-    private final Map<String, FlowWorkerDef> workerMap;
+    private final Map<String, WorkerDef> workerMap;
     private final List<String> steps;
     private final Set<String> iterableSteps;
     private final ObjectMapper objectMapper;
@@ -42,7 +41,7 @@ public class OgnlFlow implements IFlowDef {
         this.defaultTimeout = defaultTimeout;
 
         if(flowData.response()!=null){
-            FlowWorkerDef w1 = new FlowWorkerDef();
+            WorkerDef w1 = new WorkerDef();
             w1.setName("response");
             w1.setPath("echo");
             w1.setParams(flowData.response());
@@ -50,7 +49,7 @@ public class OgnlFlow implements IFlowDef {
         }
         LOGGER.debug("tasks {}", flowData.workers());
 
-        this.workerMap = flowData.workers().stream().collect(Collectors.toMap(FlowWorkerDef::getName, Function.identity()));
+        this.workerMap = flowData.workers().stream().collect(Collectors.toMap(WorkerDef::getName, Function.identity()));
         this.steps = flowSteps(flowData.workers());
         LOGGER.debug("steps {}", steps);
         this.iterableSteps = steps.stream()
@@ -80,7 +79,7 @@ public class OgnlFlow implements IFlowDef {
         return flowData.authJwtIssuers();
     }
 
-    public FlowWorkerDef worker(String name) {
+    public WorkerDef worker(String name) {
         return workerMap.get(name);
     }
 
@@ -143,7 +142,7 @@ public class OgnlFlow implements IFlowDef {
             }
         }
         for(int i=0; i<maxIndex; i++){
-            for(FlowWorkerDef worker : flowData.workers()){
+            for(WorkerDef worker : flowData.workers()){
                 if(worker.getName().startsWith(aktState) && !existMap.containsKey(worker.getName()+":"+i)){
                     tasks.add(createTask(flowCase.getId(), worker, i));
                     notStarted = true;
@@ -169,7 +168,7 @@ public class OgnlFlow implements IFlowDef {
         return FlowCase.FINISHED;
     }
 
-    private FlowTaskEntity createTask(String caseId, FlowWorkerDef worker, int stepIndex){
+    private FlowTaskEntity createTask(String caseId, WorkerDef worker, int stepIndex){
         FlowTaskEntity taskEntity = new FlowTaskEntity(ID.newId(), caseId, worker.getName(), stepIndex);
         taskEntity.setTimeout(worker.getTimeout()!=null ? worker.getTimeout() : defaultTimeout);
         return taskEntity;
@@ -200,7 +199,7 @@ public class OgnlFlow implements IFlowDef {
 
     private TaskHttpRequest execTask(FlowTaskEntity task, FlowCaseEntity flowCase, FlowScript flowScript) {
 
-        FlowWorkerDef workerDef = workerMap.get(task.getWorker());
+        WorkerDef workerDef = workerMap.get(task.getWorker());
         if(workerDef.getWhere()!=null){
             try{
                 if(!flowScript.execWhere(workerDef.getWhere())){
@@ -238,7 +237,7 @@ public class OgnlFlow implements IFlowDef {
     }
 
     @SuppressWarnings("rawtypes")
-    private TaskHttpRequest createTaskRequest(FlowScript script, FlowWorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task) throws Exception {
+    private TaskHttpRequest createTaskRequest(FlowScript script, WorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task) throws Exception {
 
         String path = workerDef.getPath();
 
@@ -291,9 +290,9 @@ public class OgnlFlow implements IFlowDef {
         }
     }
 
-    private List<String> flowSteps(List<FlowWorkerDef> workers) {
+    private List<String> flowSteps(List<WorkerDef> workers) {
         List<String> steps = new ArrayList<>();
-        for(FlowWorkerDef worker : workers){
+        for(WorkerDef worker : workers){
             String step = step(worker.getName());
             if(worker.getName().endsWith("/_iterator")){
                 if(steps.contains(step)){

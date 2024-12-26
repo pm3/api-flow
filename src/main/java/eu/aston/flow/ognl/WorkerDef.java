@@ -1,10 +1,10 @@
-package eu.aston.flow.def;
+package eu.aston.flow.ognl;
 
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class FlowWorkerDef {
+public class WorkerDef {
     private String name;
     private String path;
     @JsonProperty(value = "$path")

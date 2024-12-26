@@ -16,7 +16,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowRequestEntity;

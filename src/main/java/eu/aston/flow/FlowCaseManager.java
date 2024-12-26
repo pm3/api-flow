@@ -10,7 +10,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import eu.aston.blob.BlobStore;
-import eu.aston.flow.def.FlowWorkerDef;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;

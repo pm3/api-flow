@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.AppConfig;
-import eu.aston.flow.IFlowFactory;
 import eu.aston.flow.IFlowDef;
+import eu.aston.flow.IFlowFactory;
 
 public class OgnlFlowFactory implements IFlowFactory {
 

@@ -1,13 +1,9 @@
 package eu.aston.flow.store;
 
 import java.util.List;
-import java.util.Optional;
 
-import eu.aston.flow.model.FlowTask;
 import eu.aston.micronaut.sql.aop.Query;
 import eu.aston.micronaut.sql.aop.SqlApi;
-import eu.aston.micronaut.sql.convert.JsonConverterFactory;
-import eu.aston.micronaut.sql.entity.Format;
 
 @SqlApi
 public interface IFlowRequestStore {

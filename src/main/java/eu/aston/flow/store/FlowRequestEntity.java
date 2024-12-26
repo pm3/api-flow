@@ -1,7 +1,5 @@
 package eu.aston.flow.store;
 
-import java.util.Map;
-
 import eu.aston.micronaut.sql.entity.Table;
 
 @Table(name = "flow_request")
