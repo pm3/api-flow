@@ -172,7 +172,7 @@ public class FlowCaseManager {
             task.setError(error);
         }
 
-        FlowRequestEntity request = requestStore.loadById(task.getId());
+        FlowRequestEntity request = requestStore.loadBaseById(task.getId());
         spanSender.finishTask(flowCase, task, request);
         flowThreadPool.addCase(task.getFlowCaseId(), task.getId());
     }

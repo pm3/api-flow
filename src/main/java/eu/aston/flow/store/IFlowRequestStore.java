@@ -10,8 +10,8 @@ public interface IFlowRequestStore {
 
     void insert(FlowRequestEntity flowRequest);
 
-    @Query("select * from flow_request where id=:id")
-    FlowRequestEntity loadById(String id);
+    @Query("select id, method, path from flow_request where id=:id")
+    FlowRequestEntity loadBaseById(String id);
 
     @Query("select * from flow_request where flowCaseId=:flowCaseId")
     List<FlowRequestEntity> selectByCaseId(String flowCaseId);
