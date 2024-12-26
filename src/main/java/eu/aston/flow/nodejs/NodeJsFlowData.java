@@ -8,7 +8,8 @@ import eu.aston.flow.def.JwtIssuerDef;
 import io.micronaut.core.annotation.Introspected;
 
 @Introspected
-public record NodeJsFlowData(Map<String, String> labels,
-                             List<String> authApiKeys, List<JwtIssuerDef> authJwtIssuers,
-                             List<FlowWorkerDef> workers) {
+public record NodeJsFlowData(Map<String,
+                             String> labels,
+                             List<String> authApiKeys,
+                             List<JwtIssuerDef> authJwtIssuers) {
 }

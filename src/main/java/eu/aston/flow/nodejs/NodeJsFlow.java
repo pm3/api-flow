@@ -23,7 +23,6 @@ public class NodeJsFlow implements IFlowDef {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeJsFlow.class);
 
     private NodeJsFlowData flowData;
-    private Map<String, FlowWorkerDef> workerMap;
     private final String code;
     private final byte[] flowJs;
     private final CallbackRunner callbackRunner;
@@ -61,11 +60,6 @@ public class NodeJsFlow implements IFlowDef {
     }
 
     @Override
-    public FlowWorkerDef worker(String name) {
-        return workerMap.get(name);
-    }
-
-    @Override
     public List<TaskHttpRequest> execTick(FlowCaseEntity flowCase, List<FlowTaskEntity> tasks) {
         try {
             byte[] body = objectMapper.writeValueAsBytes(new NodeJsFlowRequest(flowCase, tasks));
@@ -85,7 +79,6 @@ public class NodeJsFlow implements IFlowDef {
         HttpResponse<byte[]> response = callbackRunner.call("POST", URI.create(nodeUri+"/flow"), null, flowJs);
         if (response.statusCode() == 200) {
             this.flowData = objectMapper.readValue(response.body(), NodeJsFlowData.class);
-            this.workerMap = flowData.workers().stream().collect(Collectors.toMap(FlowWorkerDef::getName, Function.identity()));
             return;
         }
         throw new Exception("initJsFlowDef error "+new String(response.body()));

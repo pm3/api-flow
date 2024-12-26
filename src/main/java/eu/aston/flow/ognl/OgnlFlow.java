@@ -80,7 +80,6 @@ public class OgnlFlow implements IFlowDef {
         return flowData.authJwtIssuers();
     }
 
-    @Override
     public FlowWorkerDef worker(String name) {
         return workerMap.get(name);
     }
