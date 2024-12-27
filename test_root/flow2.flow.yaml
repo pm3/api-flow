@@ -36,7 +36,7 @@ workers:
     path: "http://localhost:8081/worker_3"
     method: POST
     params:
-      $a: worker.step2.0.worker_22.a + worker.step2.1.worker_22.a + worker.step2.2.worker_22.a
+      $a: worker.step2[0].worker_22.a + worker.step2[1].worker_22.a + worker.step2[2].worker_22.a
       b: 8
 
 response:

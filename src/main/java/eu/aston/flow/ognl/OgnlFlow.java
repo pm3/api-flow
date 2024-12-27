@@ -112,18 +112,22 @@ public class OgnlFlow implements IFlowDef {
         Map<String, Object> workerMap = new HashMap<>();
         for(FlowTaskEntity t : tasks){
             String[] items = t.getWorker().split("/");
-            Map<String, Object> stepMap = items.length <= 1 ? workerMap
-                : (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k) -> new StepMap());
+            String stepName = items[0];
             String workerName = items.length>1 ? items[1] : items[0];
             if(iterableSteps.contains(items[0])){
-                taskToMap(stepMap, workerName, t, t.getStepIndex());
+                int index = t.getStepIndex();
+                List<StepMap> list = (List<StepMap>)workerMap.computeIfAbsent(stepName, (k)->new ArrayList<>());
+                while(list.size()<index+1) list.add(new StepMap());
+                taskToMap(list.get(index), workerName, t);
             } else {
-                taskToMap(stepMap, workerName, t, -1);
+                Map<String, Object> stepMap = items.length == 1 ? workerMap : (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k) -> new StepMap());
+                taskToMap(stepMap, workerName, t);
             }
         }
         return workerMap;
     }
 
+    @SuppressWarnings("rawtypes")
     private String openTasks(FlowCaseEntity flowCase, List<FlowTaskEntity> tasks) {
 
         String aktState = flowCase.getState();
@@ -139,6 +143,9 @@ public class OgnlFlow implements IFlowDef {
                 if (t.getFinished() == null)
                     notFinished = true;
                 existMap.put(t.getWorker() + ":" + t.getStepIndex(), t.getId());
+            }
+            if(t.getWorker().equals(aktState+"/_iterator") && t.getResponse() instanceof List list){
+                maxIndex = list.size();
             }
         }
         for(int i=0; i<maxIndex; i++){
@@ -174,6 +181,7 @@ public class OgnlFlow implements IFlowDef {
         return taskEntity;
     }
 
+    @SuppressWarnings("rawtypes")
     private void execTickStep(String stepCode, int stepIndex, FlowCaseEntity flowCase,
                               List<FlowTaskEntity> openTasks, Map<String, Object> workerContext, List<TaskHttpRequest> requests){
 
@@ -183,8 +191,15 @@ public class OgnlFlow implements IFlowDef {
         Map<String, Object> root = new HashMap<>();
         root.put("case", flowCase);
         root.put("worker", workerContext);
+
         if(workerContext.get(stepCode) instanceof StepMap stepMap){
             root.putAll(stepMap);
+        }
+
+        if(stepIndex>=0 && workerContext.get(stepCode) instanceof List list){
+            if(list.size()>stepIndex && list.get(stepIndex) instanceof StepMap stepMap){
+                root.putAll(stepMap);
+            }
         }
 
         LOGGER.debug("root {}", root);
@@ -273,21 +288,14 @@ public class OgnlFlow implements IFlowDef {
         return new TaskHttpRequest(task.getId(), workerDef.getMethod(), path, headers, data, workerDef.isBlocked(), null);
     }
 
-    @SuppressWarnings("unchecked")
-    private void taskToMap(Map<String, Object> stepMap, String name, FlowTaskEntity t, int index) {
+    private void taskToMap(Map<String, Object> stepMap, String name, FlowTaskEntity t) {
         Object resp = t.getResponse();
         if(t.getFinished()==null){
             resp = new WaitingException(t.getWorker());
         } else if (t.getError()!=null){
             resp = new TaskResponseException("error "+t.getWorker()+" "+t.getResponseCode());
         }
-        if(index<0){
-            stepMap.put(name, resp);
-        } else {
-            List<Object> list = (List<Object>)stepMap.computeIfAbsent(name, (k)->new ArrayList<>());
-            while(list.size()<index+1) list.add(null);
-            list.set(index, resp);
-        }
+        stepMap.put(name, resp);
     }
 
     private List<String> flowSteps(List<WorkerDef> workers) {
