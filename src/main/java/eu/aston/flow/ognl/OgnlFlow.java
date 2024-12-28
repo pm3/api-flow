@@ -91,8 +91,7 @@ public class OgnlFlow implements IFlowDef {
             return List.of();
         }
         if (aktStep.equals(FlowCase.FINISHED)){
-            flowCase.setState(FlowCase.FINISHED);
-            return List.of(new TaskHttpRequest(FlowCase.FINISHED, FlowCase.FINISHED, FlowCase.FINISHED, null, null, true, FlowCase.FINISHED));
+            return List.of(TaskHttpRequest.of(FlowCase.FINISHED, FlowCase.FINISHED, 0, FlowCase.FINISHED));
         }
 
         Map<String, Object> workerContext = createWorkerContext(tasks);
@@ -168,7 +167,6 @@ public class OgnlFlow implements IFlowDef {
         String next = nextStep(aktState);
         if(next!=null){
             LOGGER.info("next step {} {}", flowCase.getId(), next);
-            //spustam novy step
             flowCase.setState(next);
             return openTasks(flowCase, tasks);
         }
@@ -205,34 +203,34 @@ public class OgnlFlow implements IFlowDef {
         LOGGER.debug("root {}", root);
         FlowScript flowScript = new FlowScript(root);
         for(FlowTaskEntity task : openTasks){
-            TaskHttpRequest request = execTask(task, flowCase, flowScript);
+            TaskHttpRequest request = execTask(task, stepCode, flowCase, flowScript);
             if(request!=null) {
                 requests.add(request);
             }
         }
     }
 
-    private TaskHttpRequest execTask(FlowTaskEntity task, FlowCaseEntity flowCase, FlowScript flowScript) {
+    private TaskHttpRequest execTask(FlowTaskEntity task, String step, FlowCaseEntity flowCase, FlowScript flowScript) {
 
         WorkerDef workerDef = workerMap.get(task.getWorker());
         if(workerDef.getWhere()!=null){
             try{
                 if(!flowScript.execWhere(workerDef.getWhere())){
-                    return TaskHttpRequest.of(task.getId(), "406:where=false");
+                    return TaskHttpRequest.of(task.getWorker(), step, task.getStepIndex(), "406:where=false");
                 }
             }catch (WaitingException e){
                 return null;
             }catch (TaskResponseException e){
-                return TaskHttpRequest.of(task.getId(), e.getMessage());
+                return TaskHttpRequest.of(task.getWorker(), step, task.getStepIndex(), e.getMessage());
             }catch (OgnlException e){
                 LOGGER.warn("ignore task {} where {}, exec error {}", task, workerDef.getWhere(), e.getMessage());
-                return TaskHttpRequest.of(task.getId(),"execute where error "+e.getMessage());
+                return TaskHttpRequest.of(task.getWorker(), step, task.getStepIndex(),"execute where error "+e.getMessage());
             }
         }
 
         String error = null;
         try{
-            return createTaskRequest(flowScript, workerDef, flowCase, task);
+            return createTaskRequest(flowScript, workerDef, flowCase, task, step);
         }catch (WaitingException e) {
             return null;
         }catch (TaskResponseException e) {
@@ -246,13 +244,13 @@ public class OgnlFlow implements IFlowDef {
         }
         if(error!=null){
             task.setError(error);
-            return TaskHttpRequest.of(task.getId(), error);
+            return TaskHttpRequest.of(task.getWorker(), step, task.getStepIndex(), error);
         }
         return null;
     }
 
     @SuppressWarnings("rawtypes")
-    private TaskHttpRequest createTaskRequest(FlowScript script, WorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task) throws Exception {
+    private TaskHttpRequest createTaskRequest(FlowScript script, WorkerDef workerDef, FlowCaseEntity flowCase, FlowTaskEntity task, String step) throws Exception {
 
         String path = workerDef.getPath();
 
@@ -285,7 +283,7 @@ public class OgnlFlow implements IFlowDef {
                 throw e;
             }
         }
-        return new TaskHttpRequest(task.getId(), workerDef.getMethod(), path, headers, data, workerDef.isBlocked(), null);
+        return new TaskHttpRequest(task.getWorker(), step, task.getStepIndex(), workerDef.getMethod(), path, headers, data, workerDef.isBlocked(), null);
     }
 
     private void taskToMap(Map<String, Object> stepMap, String name, FlowTaskEntity t) {

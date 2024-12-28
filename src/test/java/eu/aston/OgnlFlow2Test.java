@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import ch.qos.logback.classic.Level;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,11 +16,12 @@ import eu.aston.flow.ognl.OgnlFlowFactory;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.task.TaskHttpRequest;
+import eu.aston.utils.ID;
 import org.junit.jupiter.api.Test;
 
 public class OgnlFlow2Test {
 
-    static FlowTaskEntity createTaskOk(TaskHttpRequest request, FlowTaskEntity task, ObjectMapper objectMapper) throws Exception {
+    static void createTaskOk(TaskHttpRequest request, FlowTaskEntity task, ObjectMapper objectMapper) throws Exception {
         task.setResponseCode(200);
         if(request.body()==null){
             task.setResponse(new HashMap<>());
@@ -31,7 +30,6 @@ public class OgnlFlow2Test {
         }
         task.setCreated(Instant.now());
         task.setFinished(Instant.now());
-        return task;
     }
 
     @Test
@@ -52,7 +50,7 @@ public class OgnlFlow2Test {
         flowCase.setParams(Map.of("a", 1, "b", "1", "items", List.of(1,2,3)));
         List<FlowTaskEntity> tasks = new ArrayList<>();
         for(int i=0; i<200; i++){
-            List<TaskHttpRequest> requests = ognlFlow.execTick(flowCase, tasks);
+            List<TaskHttpRequest> requests = ognlFlow.execTick(flowCase, new ArrayList<>(tasks));
 
             System.out.println("state "+flowCase.getState());
             System.out.println("tasks "+tasks);
@@ -62,18 +60,15 @@ public class OgnlFlow2Test {
                 break;
             }
 
-            Map<String, FlowTaskEntity> taskMap = tasks.stream().collect(
-                    Collectors.toMap(FlowTaskEntity::getId, Function.identity()));
             for (TaskHttpRequest request : requests) {
-                FlowTaskEntity task = taskMap.get(request.taskId());
-                if (task != null) {
-                    createTaskOk(request, task, objectMapper);
-                    if(task.getWorker().equals("response")){
-                        flowCase.setResponse(task.getResponse());
-                    }
-                } else {
-                    System.out.println("task not found " + request.taskId());
+                FlowTaskEntity task = new FlowTaskEntity(ID.newId(), flowCase.getId(), request.worker(), request.stepIndex());
+                task.setCreated(Instant.now());
+                createTaskOk(request, task, objectMapper);
+                tasks.add(task);
+                if(task.getWorker().equals("response")){
+                    flowCase.setResponse(task.getResponse());
                 }
+                flowCase.setState(request.step());
             }
             tasks.removeIf(t-> t.getFinished()==null);
         }

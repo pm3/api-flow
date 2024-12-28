@@ -121,8 +121,17 @@ public class FlowTaskEntity {
         this.queueSent = queueSent;
     }
 
+//    @Override
+//    public String toString() {
+//        return "Task "+worker+" case="+flowCaseId+" id="+id+" state="+responseCode;
+//    }
+
+
     @Override
     public String toString() {
-        return "Task "+worker+" case="+flowCaseId+" id="+id+" state="+responseCode;
+        return "FlowTaskEntity{" + "id='" + id + '\'' + ", flowCaseId='" + flowCaseId + '\'' + ", worker='" + worker +
+                '\'' + ", stepIndex=" + stepIndex + ", responseCode=" + responseCode + ", response=" + response +
+                ", error='" + error + '\'' + ", timeout=" + timeout + ", created=" + created + ", finished=" +
+                finished + ", queueSent=" + queueSent + '}';
     }
 }

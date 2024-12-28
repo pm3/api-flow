@@ -44,7 +44,7 @@ public class TaskExecutor {
         URI uri = new URI(request.path());
         if(uri.getHost()==null && uri.getPath().startsWith("/queue/")){
             Map<String, String> headers2 = HeaderConverter.queueRequest(request);
-            request = new TaskHttpRequest(request.taskId(), "POST", appConfig.getQueueHost()+uri.getPath(), headers2 , request.body(), false, null);
+            request = new TaskHttpRequest(request.worker(), request.step(), request.stepIndex(), "POST", appConfig.getQueueHost()+uri.getPath(), headers2 , request.body(), false, null);
         } else if(uri.getHost()==null){
             uri = new URI(appConfig.getAppHost()).resolve(request.path());
         }

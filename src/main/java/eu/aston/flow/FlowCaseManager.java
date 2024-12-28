@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import eu.aston.blob.BlobStore;
@@ -190,20 +189,18 @@ public class FlowCaseManager {
         IFlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                                        .orElseThrow(()->new UserException("invalid flowCaseType id="+flowCase.getId()+", type="+flowCase.getCaseType()));
         List<FlowTaskEntity> tasks = taskStore.selectTaskByCaseId(flowCase.getId());
-        Map<String, FlowTaskEntity> taskMap = tasks.stream().collect(Collectors.toMap(FlowTaskEntity::getId, Function.identity()));
         LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getState());
 
-        String prevState = flowCase.getState();
         List<TaskHttpRequest> requests = flowDef.execTick(flowCase, tasks);
-        if(requests.size()==1 && Objects.equals(requests.getFirst().error(), FlowCase.FINISHED)){
+        if(requests.size()==1 && Objects.equals(requests.getFirst().step(), FlowCase.FINISHED)){
             finishFlow(flowCase, flowDef, tasks);
             return;
         }
-        if(!prevState.equals(flowCase.getState())){
-            caseStore.updateFlowState(flowCase.getId(), flowCase.getState());
+        if(!requests.isEmpty() && !requests.getLast().step().equals(flowCase.getState())){
+            caseStore.updateFlowState(flowCase.getId(), requests.getLast().step());
         }
         for(TaskHttpRequest request : requests){
-            FlowTaskEntity task = taskMap.get(request.taskId());
+            FlowTaskEntity task = new FlowTaskEntity(ID.newId(), flowCase.getId(), request.worker(), request.stepIndex());
             if(request.error()!=null){
                 int statusCode = 400;
                 String message = request.error();
