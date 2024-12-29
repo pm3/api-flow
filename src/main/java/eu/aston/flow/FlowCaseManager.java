@@ -191,13 +191,15 @@ public class FlowCaseManager {
         List<FlowTaskEntity> tasks = taskStore.selectTaskByCaseId(flowCase.getId());
         LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getState());
 
+        String prevStep = flowCase.getState();
         List<TaskHttpRequest> requests = flowDef.execTick(flowCase, tasks);
         if(requests.size()==1 && Objects.equals(requests.getFirst().step(), FlowCase.FINISHED)){
             finishFlow(flowCase, flowDef, tasks);
             return;
         }
-        if(!requests.isEmpty() && !requests.getLast().step().equals(flowCase.getState())){
-            caseStore.updateFlowState(flowCase.getId(), requests.getLast().step());
+        if(!requests.isEmpty() && !Objects.equals(requests.getLast().step(),prevStep)){
+            flowCase.setState(requests.getLast().step());
+            caseStore.updateFlowState(flowCase.getId(), flowCase.getState());
         }
         for(TaskHttpRequest request : requests){
             FlowTaskEntity task = new FlowTaskEntity(ID.newId(), flowCase.getId(), request.worker(), request.stepIndex());

@@ -106,26 +106,6 @@ public class OgnlFlow implements IFlowDef {
         return requests;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> createWorkerContext(List<FlowTaskEntity> tasks) {
-        Map<String, Object> workerMap = new HashMap<>();
-        for(FlowTaskEntity t : tasks){
-            String[] items = t.getWorker().split("/");
-            String stepName = items[0];
-            String workerName = items.length>1 ? items[1] : items[0];
-            if(iterableSteps.contains(items[0])){
-                int index = t.getStepIndex();
-                List<StepMap> list = (List<StepMap>)workerMap.computeIfAbsent(stepName, (k)->new ArrayList<>());
-                while(list.size()<index+1) list.add(new StepMap());
-                taskToMap(list.get(index), workerName, t);
-            } else {
-                Map<String, Object> stepMap = items.length == 1 ? workerMap : (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k) -> new StepMap());
-                taskToMap(stepMap, workerName, t);
-            }
-        }
-        return workerMap;
-    }
-
     @SuppressWarnings("rawtypes")
     private String openTasks(FlowCaseEntity flowCase, List<FlowTaskEntity> tasks) {
 
@@ -178,6 +158,27 @@ public class OgnlFlow implements IFlowDef {
         taskEntity.setTimeout(worker.getTimeout()!=null ? worker.getTimeout() : defaultTimeout);
         return taskEntity;
     }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> createWorkerContext(List<FlowTaskEntity> tasks) {
+        Map<String, Object> workerMap = new HashMap<>();
+        for(FlowTaskEntity t : tasks){
+            String[] items = t.getWorker().split("/");
+            String stepName = items[0];
+            String workerName = items.length>1 ? items[1] : items[0];
+            if(iterableSteps.contains(items[0])){
+                int index = t.getStepIndex();
+                List<StepMap> list = (List<StepMap>)workerMap.computeIfAbsent(stepName, (k)->new ArrayList<>());
+                while(list.size()<index+1) list.add(new StepMap());
+                taskToMap(list.get(index), workerName, t);
+            } else {
+                Map<String, Object> stepMap = items.length == 1 ? workerMap : (Map<String, Object>) workerMap.computeIfAbsent(items[0], (k) -> new StepMap());
+                taskToMap(stepMap, workerName, t);
+            }
+        }
+        return workerMap;
+    }
+
 
     @SuppressWarnings("rawtypes")
     private void execTickStep(String stepCode, int stepIndex, FlowCaseEntity flowCase,
