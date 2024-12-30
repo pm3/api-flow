@@ -20,14 +20,13 @@ public class Flow3Run {
         try{
             Executor executor = Executors.newThreadPerTaskExecutor(Thread::new);
             executor.execute(()->SumServer.main(new String[]{}));
-            executor.execute(()->Application.main(new String[]{}));
+            //executor.execute(()->Application.main(new String[]{}));
 
             HttpClient httpClient = HttpClient.newBuilder().build();
             ObjectMapper objectMapper = new ObjectMapper();
 
             Map<String,Object> map = new HashMap<>();
-            map.put("a", 2);
-            map.put("b", 3);
+            map.put("a", 1);
             map.put("c", List.of("a", "b", "c"));
             String json = objectMapper.writeValueAsString(map);
 

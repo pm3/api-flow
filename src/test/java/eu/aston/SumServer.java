@@ -28,9 +28,9 @@ public class SumServer implements HttpHandler {
     public static void main(String[] args) {
         try {
 
-            SumServer workerServer = new SumServer(null);
-            Executor executor = Executors.newSingleThreadExecutor();
-            executor.execute(workerServer::worker);
+            //SumServer workerServer = new SumServer(null);
+            //Executor executor = Executors.newSingleThreadExecutor();
+            //executor.execute(workerServer::worker);
 
             Executor executor2 = Executors.newSingleThreadExecutor();
             int port = 8081;
@@ -108,9 +108,9 @@ public class SumServer implements HttpHandler {
         }
         resp.put("c", sum);
         byte[] respBody = objectMapper.writeValueAsBytes(resp);
-        try{
-            Thread.sleep(20_000+random.nextLong(200, 1000));
-        }catch (Exception e){}
+//        try{
+//            Thread.sleep(20_000+random.nextLong(200, 1000));
+//        }catch (Exception e){}
         return respBody;
     }
 
