@@ -8,7 +8,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.AppConfig;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.IFlowFactory;
+import eu.aston.user.UserException;
+import jakarta.inject.Singleton;
 
+@Singleton
 public class OgnlFlowFactory implements IFlowFactory {
 
     public static final String FLOW_YAML_SUFFIX = ".flow.yaml";
@@ -30,8 +33,22 @@ public class OgnlFlowFactory implements IFlowFactory {
         if(n.endsWith(FLOW_YAML_SUFFIX)) {
             String code = n.substring(0, n.length() - FLOW_YAML_SUFFIX.length());
             OgnlFlowData flowData = yamlObjectMapper.readValue(f, OgnlFlowData.class);
+            validData(flowData);
             return new OgnlFlow(code, flowData, objectMapper, defaultTimeout);
         }
         return null;
+    }
+
+    private void validData(OgnlFlowData flowData) {
+        if(flowData.workers()==null || flowData.workers().isEmpty()){
+            throw new UserException("workers is empty");
+        }
+        for(WorkerDef worker : flowData.workers()){
+            if(worker.getMethod()==null){
+                worker.setMethod("POST");
+            } else {
+                worker.setMethod(worker.getMethod().toUpperCase());
+            }
+        }
     }
 }

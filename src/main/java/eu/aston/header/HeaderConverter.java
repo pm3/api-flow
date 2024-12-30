@@ -66,6 +66,15 @@ public class HeaderConverter {
 
     public static Map<String, String> queueRequest(TaskHttpRequest request) {
         Map<String, String> map = new HashMap<>();
+        if(request.headers()!=null){
+            request.headers().forEach((k,v)->{
+                if(!headerNamesRequest.contains(k) && !k.startsWith("fw-")){
+                    map.put(H_HEADER+k, v);
+                } else {
+                    map.put(k, v);
+                }
+            });
+        }
         return map;
     }
 }

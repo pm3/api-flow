@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.model.FlowCase;
+import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.task.TaskHttpRequest;
@@ -42,7 +43,7 @@ public class OgnlFlow implements IFlowDef {
 
         if(flowData.response()!=null){
             WorkerDef w1 = new WorkerDef();
-            w1.setName("response");
+            w1.setName(FlowTask.FLOW_RESPONSE);
             w1.setPath("echo");
             w1.setParams(flowData.response());
             flowData.workers().add(w1);
@@ -184,7 +185,6 @@ public class OgnlFlow implements IFlowDef {
     private void execTickStep(String stepCode, int stepIndex, FlowCaseEntity flowCase,
                               List<FlowTaskEntity> openTasks, Map<String, Object> workerContext, List<TaskHttpRequest> requests){
 
-        LOGGER.debug("next tick {}",flowCase.getId());
         LOGGER.debug("opened tasks {}", openTasks.stream().map(FlowTaskEntity::getWorker).toList());
 
         Map<String, Object> root = new HashMap<>();

@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import eu.aston.flow.def.JwtIssuerDef;
@@ -31,6 +32,7 @@ public class FlowDefStore {
     public FlowDefStore(JwtVerify jwtVerify, IFlowFactory[] flowFactories) {
         this.jwtVerify = jwtVerify;
         this.flowFactories = flowFactories;
+        LOGGER.info("factories {}", Stream.of(flowFactories).map(f -> f.getClass().getSimpleName()).reduce((a, b) -> a+", "+b).orElse(""));
     }
 
     public Optional<IFlowDef> flowDef(String type){
@@ -38,7 +40,7 @@ public class FlowDefStore {
     }
 
     public void loadRoot(File rootDir, boolean clear) {
-        LOGGER.info("start reload configs, clear {}", clear);
+        LOGGER.info("start reload configs, clear {}", rootDir.getAbsolutePath());
         if(!rootDir.isDirectory()) {
             throw new UserException("invalid root dir "+rootDir.getAbsolutePath());
         }
@@ -59,6 +61,7 @@ public class FlowDefStore {
                 IFlowDef def = factory.createFlow(f);
                 if(def!=null){
                     loadFlow(f, def);
+                    LOGGER.info("load flow {} file {}", def.getCode(), f.getAbsolutePath());
                     return;
                 }
             }catch (Exception e){
@@ -81,6 +84,9 @@ public class FlowDefStore {
                 authMap.add(flowDef.getCode()+"|"+issuer.getIssuer()+"#"+issuer.getAud());
                 jwtVerify.addIssuer(issuer.getIssuer(), issuer.getAud(), issuer.getUrl());
             }
+        }
+        if(flowDef.getAuthApiKeys()==null && flowDef.getAuthJwtIssuers()==null){
+            authMap.add(flowDef.getCode()+"|*");
         }
     }
 

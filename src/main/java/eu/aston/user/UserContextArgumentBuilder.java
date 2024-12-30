@@ -78,6 +78,6 @@ public class UserContextArgumentBuilder implements TypedRequestArgumentBinder<Us
             return () -> Optional.of(userContext);
         }
 
-        return ()->Optional.of(new UserContext(null, null));
+        return ()->Optional.of(new UserContext("*", null));
     }
 }
