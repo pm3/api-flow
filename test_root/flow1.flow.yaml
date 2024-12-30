@@ -1,3 +1,7 @@
+#cronJobs:
+#  - expression: "* * * * *"
+#    params:
+#      a: 1
 workers:
   - name: worker_1
     path: "http://localhost:8081/worker_1"

@@ -47,6 +47,7 @@ public class CronManager {
     }
 
     public void run(FlowCron flowCron){
+        LOGGER.info("run flow cron job {}/{}", flowCron.flowDef.getCode(), flowCron.pattern);
         String caseId = ID.newId();
         FlowCaseCreate caseCreate = new FlowCaseCreate(flowCron.flowDef.getCode(), null, null, flowCron.params(), null);
         flowCaseManager.createFlow(caseId, caseCreate);

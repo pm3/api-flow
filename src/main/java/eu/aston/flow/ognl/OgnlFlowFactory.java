@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.AppConfig;
 import eu.aston.flow.IFlowDef;
 import eu.aston.flow.IFlowFactory;
+import eu.aston.flow.def.CronJob;
 import eu.aston.user.UserException;
 import jakarta.inject.Singleton;
 
@@ -41,13 +42,35 @@ public class OgnlFlowFactory implements IFlowFactory {
 
     private void validData(OgnlFlowData flowData) {
         if(flowData.workers()==null || flowData.workers().isEmpty()){
-            throw new UserException("workers is empty");
+            throw new UserException("flow worker list is empty");
         }
         for(WorkerDef worker : flowData.workers()){
+            if(worker.getName()==null){
+                throw new UserException("worker name is null "+worker);
+            }
+            if(!worker.getName().matches("^[a-zA-Z][a-zA-Z0-9_]+$")
+                    && !worker.getName().matches("^[a-zA-Z][a-zA-Z0-9_]+/[a-zA-Z][a-zA-Z0-9_]+$")
+                    && !worker.getName().matches("^[a-zA-Z][a-zA-Z0-9_]+/_iterator$")
+            ){
+                throw new UserException("worker name is invalid "+worker.getName());
+            }
             if(worker.getMethod()==null){
                 worker.setMethod("POST");
             } else {
                 worker.setMethod(worker.getMethod().toUpperCase());
+            }
+            if(worker.getPath()==null && worker.getPathExpr()==null){
+                throw new UserException("worker path is null "+worker);
+            }
+            if(worker.getTimeout()==null){
+                worker.setTimeout(defaultTimeout);
+            }
+        }
+        if(flowData.cronJobs()!=null){
+            for(CronJob cronJob : flowData.cronJobs()){
+                if(cronJob.expression()==null){
+                    throw new UserException("cron job expression is required");
+                }
             }
         }
     }
