@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.IFlowDef;
+import eu.aston.flow.def.CronJob;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowTask;
@@ -80,8 +81,9 @@ public class OgnlFlow implements IFlowDef {
         return flowData.authJwtIssuers();
     }
 
-    public WorkerDef worker(String name) {
-        return workerMap.get(name);
+    @Override
+    public List<CronJob> getCronJobs() {
+        return flowData.cronJobs();
     }
 
     @Override

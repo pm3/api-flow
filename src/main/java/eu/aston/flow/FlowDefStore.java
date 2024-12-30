@@ -2,6 +2,7 @@ package eu.aston.flow;
 
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,15 +40,14 @@ public class FlowDefStore {
         return Optional.ofNullable(flowsMap.get(type));
     }
 
-    public void loadRoot(File rootDir, boolean clear) {
+    public List<IFlowDef> listFlows() {
+        return List.copyOf(flowsMap.values());
+    }
+
+    public void loadRoot(File rootDir) {
         LOGGER.info("start reload configs, clear {}", rootDir.getAbsolutePath());
         if(!rootDir.isDirectory()) {
             throw new UserException("invalid root dir "+rootDir.getAbsolutePath());
-        }
-        if(clear) {
-            flowsMap.clear();
-            authMap.clear();
-            if(jwtVerify!=null) jwtVerify.clear();
         }
         for(File f : Objects.requireNonNull(rootDir.listFiles())){
             loadFile(f);

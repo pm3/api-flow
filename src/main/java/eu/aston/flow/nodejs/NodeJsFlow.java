@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.aston.flow.IFlowDef;
+import eu.aston.flow.def.CronJob;
 import eu.aston.flow.def.JwtIssuerDef;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
@@ -54,6 +55,11 @@ public class NodeJsFlow implements IFlowDef {
     @Override
     public List<JwtIssuerDef> getAuthJwtIssuers() {
         return flowData.authJwtIssuers();
+    }
+
+    @Override
+    public List<CronJob> getCronJobs() {
+        return List.of();
     }
 
     @Override

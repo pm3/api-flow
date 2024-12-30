@@ -71,6 +71,11 @@ public class FlowCaseManager {
         this.superTimer = superTimer;
         this.taskExecutor = taskExecutor;
         this.flowThreadPool = new FlowThreadPool(4, this::nextTick);
+
+        CronManager cronManager = new CronManager(flowDefStore, this);
+        if(cronManager.hasCronJobs()) {
+            superTimer.schedulePeriod1M(cronManager::runNow);
+        }
     }
 
     public FlowDefStore getFlowDefStore() {

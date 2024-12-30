@@ -41,6 +41,11 @@ public class SuperTimer {
         timer.schedule(timerTask(r), period, period);
     }
 
+    public void schedulePeriod1M(Runnable r) {
+        long delay = System.currentTimeMillis()%60_000;
+        timer.schedule(timerTask(r), delay, 60_000);
+    }
+
     public void execute(Runnable r){
         executor.execute(r);
     }

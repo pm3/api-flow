@@ -54,7 +54,7 @@ public class AppFactory {
                                      IFlowFactory[] flowFactories){
         FlowDefStore flowDefStore = new FlowDefStore(jwtVerify, flowFactories);
         flowDefStore.setDefaultTimeout(120);
-        flowDefStore.loadRoot(root, false);
+        flowDefStore.loadRoot(root);
         return flowDefStore;
     }
 }
