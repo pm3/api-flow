@@ -23,9 +23,9 @@ public class BaseValid {
             throw new UserException("str_max " + max + " " + name);
     }
 
-    public static void code(String code, String name) {
+    public static void code(String code, String name, String spec) {
         if(code==null) throw new UserException("require " + name);
         if(code.equals(FlowTask.STEP_ITERATOR) || code.equals(FlowTask.FLOW_RESPONSE)) return;
-        if(!code.matches("^[a-zA-Z]{1}[a-zA-Z0-9_]+$")) throw new UserException("code name error " + name + " = " + code);
+        if(!code.matches("^[a-zA-Z]{1}[a-zA-Z0-9"+spec+"]+$")) throw new UserException("code name error " + name + " = " + code);
     }
 }

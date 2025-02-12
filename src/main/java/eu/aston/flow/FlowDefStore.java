@@ -104,21 +104,21 @@ public class FlowDefStore {
 
     private void loadFlow(File flowFile, FlowDef flowDef, boolean fullConfig) {
         BaseValid.require(flowDef, "flow");
-        BaseValid.code(flowDef.getCode(), "flow.code");
+        BaseValid.code(flowDef.getCode(), "flow.code", "-");
 
         if(flowDef.getSteps()==null || flowDef.getSteps().isEmpty()){
             throw new UserException("empty flow.steps");
         }
         for(FlowStepDef step : flowDef.getSteps()){
             BaseValid.require(step, "step");
-            BaseValid.code(step.getCode(), "step.code");
+            BaseValid.code(step.getCode(), "step.code", "_");
             if(step.getWorkers()==null || step.getWorkers().isEmpty()){
                 throw new UserException("empty step.workers");
             }
             FlowWorkerDef iterator = null;
             for(FlowWorkerDef worker : step.getWorkers()){
                 BaseValid.require(worker, "worker");
-                BaseValid.code(worker.getCode(), "worker.code");
+                BaseValid.code(worker.getCode(), "worker.code", "_");
                 if(worker.getCode().equals(FlowTask.STEP_ITERATOR)){
                     iterator = worker;
                 }
@@ -177,7 +177,7 @@ public class FlowDefStore {
 
     public void loadAuth(File file, AuthDef authDef) {
 
-        BaseValid.code(authDef.getCode(), "auth.code");
+        BaseValid.code(authDef.getCode(), "auth.code", "_");
         if(authDef.getAdminUsers()==null) authDef.setAdminUsers(new ArrayList<>());
         if(authDef.getJwtIssuers()==null) authDef.setJwtIssuers(new ArrayList<>());
         if(authDef.getAdminUsers().isEmpty() && authDef.getJwtIssuers().isEmpty()){
