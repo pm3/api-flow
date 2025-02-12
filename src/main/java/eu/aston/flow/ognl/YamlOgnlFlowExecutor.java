@@ -221,6 +221,9 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         headers2.put(HeaderConverter.H_ID, task.getId());
         headers2.put("X-B3-TraceId", task.getFlowCaseId());
         headers2.put("X-B3-SpanId", task.getId().substring(0,15)+"2");
+        if(!"GET".equalsIgnoreCase(method) && !headers2.containsKey("Content-Type")){
+            headers2.put("Content-Type", "application/json");
+        }
 
         LOGGER.info("http task {} <= {}/{} - {}", path, task.getFlowCaseId(), task.getId(), task.getWorker());
         if(data!=null && flowDef.getLabels()!=null && flowDef.getLabels().containsKey("debug")){
