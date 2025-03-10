@@ -58,7 +58,7 @@ public class QueueStore {
         LOGGER.debug("addEvent {} {} => workerGroup {}", event.getId(), event.getPath(), workerGroup!=null ? workerGroup.prefix : null);
         eventMap.put(event.getId(), event);
         if (workerGroup != null) {
-            boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
+            boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w, workerGroup));
             if (!sent) {
                 LOGGER.debug("waiting in queue {}", event.getId());
                 workerGroup.events.add(event.getId());
@@ -97,7 +97,8 @@ public class QueueStore {
         return false;
     }
 
-    private void sendRemoteEvent(QueueEvent event, CompletableFuture<HttpResponse<?>> w) {
+    private void sendRemoteEvent(QueueEvent event, CompletableFuture<HttpResponse<?>> w, WorkerGroup workerGroup) {
+        workerGroup.eventCounter.incrementAndGet();
         event.setT2(System.currentTimeMillis());
         if(event.getHandleSend()!=null){
             try{
@@ -121,7 +122,6 @@ public class QueueStore {
                 workerGroupAddEvents(workerGroup, new ArrayList<>(eventMap.values().stream().filter(e->e.getPath().startsWith(prefix)).toList()));
             }
         }
-        workerGroup.eventCounter.incrementAndGet();
         workerGroup.lastWorker = System.currentTimeMillis();
         workerGroup.lastWorkerPing.put(worker.getId(), System.currentTimeMillis());
         QueueEvent event = null;
@@ -132,7 +132,7 @@ public class QueueStore {
             }
         }
         if (event != null) {
-            sendRemoteEvent(event, worker.removeResponse());
+            sendRemoteEvent(event, worker.removeResponse(), workerGroup);
         } else {
             workerGroup.workers.add(worker);
             superTimer.schedule(worker.getTimeout() * 1000L, worker, this::timeoutWorker);
@@ -142,7 +142,7 @@ public class QueueStore {
     private void workerGroupAddEvents(WorkerGroup workerGroup, List<QueueEvent> list) {
         list.sort((e1,e2)->(int)(e1.getT1()-e2.getT1()));
         for (QueueEvent event : list){
-            boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w));
+            boolean sent = nextWorker(workerGroup, (w) -> sendRemoteEvent(event, w , workerGroup));
             if (!sent) {
                 workerGroup.events.add(event.getId());
             }
