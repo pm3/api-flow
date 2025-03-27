@@ -7,11 +7,10 @@ import java.time.Instant;
 @Introspected
 public class FlowHead {
     private String id;
-    private String flowType;
+    private String type;
     private String state;
     private Instant created;
     private Instant finished;
-    private Integer duration;
 
     public String getId() {
         return id;
@@ -21,12 +20,12 @@ public class FlowHead {
         this.id = id;
     }
 
-    public String getFlowType() {
-        return flowType;
+    public String getType() {
+        return type;
     }
 
-    public void setFlowType(String flowType) {
-        this.flowType = flowType;
+    public void setType(String type) {
+        this.type = type;
     }
 
     public String getState() {
@@ -51,13 +50,5 @@ public class FlowHead {
 
     public void setFinished(Instant finished) {
         this.finished = finished;
-    }
-
-    public Integer getDuration() {
-        return duration;
-    }
-
-    public void setDuration(Integer duration) {
-        this.duration = duration;
     }
 }

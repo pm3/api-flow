@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Flow Detail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 p-6" x-data="caseFlowData">
+<header class="text-2xl font-bold mb-4">Case Flow Detail</header>
+
+<section class="bg-white p-4 rounded-lg shadow mb-4">
+    <h2 class="text-xl font-semibold mb-2">Case Flow Info</h2>
+    <div class="grid grid-cols-2 gap-4">
+        <div><strong>ID:</strong> <span x-text="flow.id"></span></div>
+        <div><strong>Created:</strong> <span x-text="date(flow.created)"></span></div>
+        <div><strong>Type:</strong> <span x-text="flow.caseType"></span></div>
+        <div><strong>Finished:</strong> <span x-text="date(flow.finished)"></span></div>
+        <div><strong>Status:</strong> <span x-text="flow.state"></span></div>
+        <div><strong>Duration:</strong> <span x-text="duration(flow.created,flow.finished)"></span></div>
+    </div>
+</section>
+
+<section class="bg-white p-4 rounded-lg shadow mb-4">
+    <h2 class="text-xl font-semibold mb-2">Task Timeline</h2>
+    <div class="relative border-l-2 border-gray-300 pl-4">
+        <template x-for="task in flow.tasks" :key="task.id">
+            <div class="mb-4 relative">
+                <a href="#" @click.prevent="selectedTask = task" class="text-blue-500 font-semibold block">
+                    <span x-text="task.step + ' ' + duration(task.created, task.finished)"></span>
+                </a>
+                <div class="ml-4 h-2" :class="getTaskColor(task)" :style="getTaskStyle(task)"></div>
+            </div>
+        </template>
+    </div>
+</section>
+
+<template x-if="selectedTask">
+    <section class="bg-white p-4 rounded-lg shadow mb-4">
+        <h2 class="text-xl font-semibold mb-2">Task Details</h2>
+        <div class="grid grid-cols-2 gap-4">
+            <div><strong>Worker:</strong> <span x-text="selectedTask.worker"></span></div>
+            <div><strong>Start:</strong> <span x-text="date(selectedTask.created)"></span></div>
+            <div><strong>Response Code:</strong> <span x-text="selectedTask.responseCode"></span></div>
+            <div><strong>End:</strong> <span x-text="date(selectedTask.finished)"></span></div>
+            <div></div>
+            <div><strong>Duration:</strong> <span x-text="duration(selectedTask.created,selectedTask.finished)"></span></div>
+        </div>
+        <pre class="bg-gray-900 text-white p-4 rounded mt-4" x-text="JSON.stringify(selectedTask.response, null, 2)"></pre>
+    </section>
+</template>
+<section class="bg-white p-4 rounded-lg shadow mb-4">
+    <h2 class="text-xl font-semibold mb-2">Response Case Flow</h2>
+    <pre class="bg-gray-900 text-white p-4 rounded" x-text="JSON.stringify(flow.response, null, 2)"></pre>
+</section>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('caseFlowData', () => ({
+            flow: {},
+            selectedTask: null,
+            minTime: 0,
+            maxTime: 0,
+            scale: 1,
+
+            init() {
+                let id = window.location.hash.substring(1);
+                console.log(id);
+                this.fetchCase(id);
+            },
+            async fetchCase(id) {
+                let response = await fetch(`/flow/case/${id}?full=true`);
+                this.flow = await response.json();
+                this.calculateTimeScale();
+            },
+            date(date) {
+                return new Date(date).toLocaleString('sk-SK');
+            },
+            duration(start, finish) {
+                if(start && finish) {
+                    const duration = new Date(finish) - new Date(start);
+                    const seconds = duration / 1000;
+                    if (seconds < 60) {
+                        return `${seconds.toFixed(1)} s`;
+                    } else if (seconds < 3600) {
+                        return `${(seconds / 60.0).toFixed(1)} min`;
+                    } else {
+                        return `${(seconds / 3600).toFixed(1)} hour`;
+                    }
+                } else {
+                    return '---';
+                }
+            },
+            calculateTimeScale() {
+                let times = this.flow.tasks.map(task => new Date(task.created).getTime());
+                let endTimes = this.flow.tasks.map(task => task.finished ? new Date(task.finished).getTime() : Date.now());
+                this.minTime = Math.min(...times);
+                this.maxTime = Math.max(...endTimes);
+                this.scale = 600 / (this.maxTime - this.minTime);
+            },
+            getTaskStyle(task) {
+                let start = new Date(task.created).getTime();
+                let end = task.finished ? new Date(task.finished).getTime() : this.maxTime;
+                let left = (start - this.minTime) * this.scale;
+                let width = Math.max((end - start) * this.scale, 5);
+                return `margin-left: ${left}px; width: ${width}px;`;
+            },
+            getTaskColor(task) {
+                if (!task.finished) return 'bg-orange-500';
+                if (task.responseCode !== 200) return 'bg-red-500';
+                return 'bg-green-500';
+            }
+        }));
+    });
+</script>
+</body>
+</html>

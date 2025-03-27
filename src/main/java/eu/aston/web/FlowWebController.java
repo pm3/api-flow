@@ -1,5 +1,6 @@
 package eu.aston.web;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.QueryValue;
@@ -8,110 +9,104 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Controller("/flow/web/")
+@Controller("/web/")
 @ApiResponse(responseCode = "200", description = "ok")
 public class FlowWebController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlowWebController.class);
 
-    private QueryUtils queryUtils;
-    private final Map<String, String> GROUP_BY_PARTS = Map.of(
-        "type", "type",
-        "state", "state",
-        "hour", "EXTRACT(HOUR FROM created)",
-        "day", "EXTRACT(DAY FROM created)",
-        "month", "EXTRACT(MONTH FROM created)"
-    );
+    private final QueryUtils queryUtils;
 
     public FlowWebController(QueryUtils queryUtils) {
         this.queryUtils = queryUtils;
     }
 
     @Operation(tags = {"web"})
+    @Get("/types")
+    public List<String> types(){
+        return queryUtils.query1("select distinct caseType from flow_case", List.of());
+    }
+
+    @Operation(tags = {"web"})
     @Get("/agg")
-    public List<FlowAgg> agg(@QueryValue String groupBy,
-                             @QueryValue String type,
-                             @QueryValue String state){
+    public List<FlowAgg> agg(@QueryValue @Nullable String group,
+                             @QueryValue @Nullable String type,
+                             @QueryValue @Nullable String state,
+                             @QueryValue @Nullable String date){
+        LOGGER.info("group: "+group+" type: "+type+" state: "+state+" date: "+date);
         List<Object> params = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
-        String[] groupByParts = null;
-        sb.append("select ");
-        if(groupBy!=null && !groupBy.isEmpty()){
-            groupByParts = groupBy.split(",");
-            for(int i=0; i<groupByParts.length; i++){
-                String expr = GROUP_BY_PARTS.get(groupByParts[i]);
-                if(expr!=null){
-                    sb.append(expr).append(" as ").append(groupByParts[i]).append(",");
-                }
-            }
-            sb.append("count(*) as count");
+        String groupByPart = null;
+        if("type".equals(group)){
+            sb.append("select caseType as name, count(*) as count ");
+            groupByPart = "caseType";
+        } else if("state".equals(group)){
+            sb.append("select state as name, count(*) as count ");
+            groupByPart = "state";
+        } else {
+            sb.append("select count(*) as count ");
         }
         sb.append("from flow_case ");
         sb.append("where 1=1 ");
-        if(groupByParts!=null && groupBy.contains("hour")){
-            //last 24 houurs
-            sb.append("and created >= now() - interval '24 hours' ");
-        } else if(groupByParts!=null && groupBy.contains("day")){
-            //last 28 days
-            sb.append("and created >= now() - interval '28 days' ");
-        } else {
-            //last 12 months
-            sb.append("and created >= now() - interval '12 months' ");
-        }
         if(type!=null && !type.isEmpty()){
-            sb.append("and flowType=?");
+            sb.append("and caseType=?");
             params.add(type);
         }
         if(state!=null && !state.isEmpty()){
             sb.append("and state=?");
             params.add(state);
         }
-        if(groupByParts!=null && groupByParts.length>0){
-            sb.append("group by ");
-            for(int i=0; i<groupByParts.length; i++){
-                String expr = GROUP_BY_PARTS.get(groupByParts[i]);
-                if(expr!=null){
-                    if(i>0) sb.append(",");
-                    sb.append(expr);
-                }
-            }
+        filterDate(date, sb, params);
+
+        if(groupByPart!=null){
+            sb.append("group by ").append(groupByPart);
         }
         LOGGER.info(sb.toString());
-        return queryUtils.query(sb.toString(), params, FlowAgg.class, new String[]{"type", "state", "hour", "day", "month", "count"});
+        return queryUtils.query(sb.toString(), params, FlowAgg.class);
     }
 
     @Operation(tags = {"web"})
-    @Get("/flows")
-    public List<FlowHead> flows(@QueryValue List<String> type,
-                                @QueryValue List<String> state,
-                                @QueryValue String date,
-                                @QueryValue Integer page){
+    @Get("/cases")
+    public List<FlowHead> cases(@QueryValue @Nullable List<String> type,
+                                @QueryValue @Nullable List<String> state,
+                                @QueryValue @Nullable String date,
+                                @QueryValue @Nullable String lastId){
         List<Object> params = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
-        sb.append("select id, flowType, state, created, finished, finished - created as duration");
+        sb.append("select id, caseType as type, state, created, finished ");
         sb.append("from flow_case ");
         sb.append("where 1=1 ");
         //extends method whereIn
-        QueryUtils.whereIn(sb, params, "flowType", type);
+        QueryUtils.whereIn(sb, params, "caseType", type);
         QueryUtils.whereIn(sb, params, "state", state);
-        if(date!=null && !date.isEmpty()){
-            sb.append("and created >= ? ");
-            params.add(date);
+        if(lastId!=null && !lastId.isEmpty()){
+            sb.append("and created < (select created from flow_case where id=?) ");
+            params.add(lastId);
         }
+        filterDate(date, sb, params);
         sb.append("order by created desc ");
-
-        if(page!=null && page>1) {
-            sb.append("limit 20 offset ? ");
-            params.add((page-1)*20);
-        } else {
-            sb.append("limit 20 ");
-        }
+        sb.append("limit 50 ");
         LOGGER.info(sb.toString());
-        return queryUtils.query(sb.toString(), params, FlowHead.class, new String[]{"id", "flowType", "state", "created", "finished", "duration"});
+        return queryUtils.query(sb.toString(), params, FlowHead.class);
+    }
+
+    private void filterDate(String date, StringBuilder sb, List<Object> params){
+        if(date==null) return;
+        if("day".equals(date)){
+            sb.append("and created >= date_trunc('day', CURRENT_DATE) ");
+        } else if("week".equals(date)){
+            sb.append("and created >= date_trunc('week', CURRENT_DATE) ");
+        } else if("month".equals(date)){
+            sb.append("and created >= date_trunc('month', CURRENT_DATE) ");
+        }
+        if(date.matches("^\\d{4}-\\d{2}-\\d{2}/\\d{4}-\\d{2}-\\d{2}$")){
+            sb.append("and created::text between ? and ? ");
+            params.add(date.substring(0,10)+" 00:00:00");
+            params.add(date.substring(11,21)+" 23:59:59");
+        }
     }
 }
