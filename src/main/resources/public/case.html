@@ -28,7 +28,7 @@
         <template x-for="task in flow.tasks" :key="task.id">
             <div class="mb-4 relative">
                 <a href="#" @click.prevent="selectedTask = task" class="text-blue-500 font-semibold block">
-                    <span x-text="task.step + ' ' + duration(task.created, task.finished)"></span>
+                    <span x-text="task.step + ' / ' + task.worker + ' / ' + duration(task.created, task.finished)"></span>
                 </a>
                 <div class="ml-4 h-2" :class="getTaskColor(task)" :style="getTaskStyle(task)"></div>
             </div>
@@ -47,10 +47,11 @@
             <div></div>
             <div><strong>Duration:</strong> <span x-text="duration(selectedTask.created,selectedTask.finished)"></span></div>
         </div>
-        <pre class="bg-gray-900 text-white p-4 rounded mt-4" x-text="JSON.stringify(selectedTask.response, null, 2)"></pre>
+        <pre x-show="selectedTask.response" class="bg-gray-900 text-white p-4 rounded mt-4" x-text="JSON.stringify(selectedTask.response, null, 2)"></pre>
+        <pre x-show="selectedTask.error" class="bg-red-900 text-white p-4 rounded mt-4" x-text="selectedTask.error"></pre>
     </section>
 </template>
-<section class="bg-white p-4 rounded-lg shadow mb-4">
+<section class="bg-white p-4 rounded-lg shadow mb-4" x-show="flow.response">
     <h2 class="text-xl font-semibold mb-2">Response Case Flow</h2>
     <pre class="bg-gray-900 text-white p-4 rounded" x-text="JSON.stringify(flow.response, null, 2)"></pre>
 </section>
