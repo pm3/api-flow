@@ -53,11 +53,11 @@ public class FlowWebController {
         sb.append("from flow_case ");
         sb.append("where 1=1 ");
         if(type!=null && !type.isEmpty()){
-            sb.append("and caseType=?");
+            sb.append("and caseType=? ");
             params.add(type);
         }
         if(state!=null && !state.isEmpty()){
-            sb.append("and state=?");
+            sb.append("and state=? ");
             params.add(state);
         }
         filterDate(date, sb, params);
