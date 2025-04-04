@@ -7,27 +7,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gray-100 p-6" x-data="caseFlowData">
-<header class="text-2xl font-bold mb-4">Case Flow Detail</header>
+<body class="bg-gray-900 text-gray-100 p-6" x-data="caseFlowData">
+<header class="text-2xl font-bold mb-4 text-white">Case Flow Detail</header>
 
-<section class="bg-white p-4 rounded-lg shadow mb-4">
-    <h2 class="text-xl font-semibold mb-2">Case Flow Info</h2>
+<section class="bg-gray-800 p-4 rounded-lg shadow mb-4">
+    <h2 class="text-xl font-semibold mb-2 text-white">Case Flow Info</h2>
     <div class="grid grid-cols-2 gap-4">
-        <div><strong>ID:</strong> <span x-text="flow.id"></span></div>
-        <div><strong>Created:</strong> <span x-text="date(flow.created)"></span></div>
-        <div><strong>Type:</strong> <span x-text="flow.caseType"></span></div>
-        <div><strong>Finished:</strong> <span x-text="date(flow.finished)"></span></div>
-        <div><strong>Status:</strong> <span x-text="flow.state"></span></div>
-        <div><strong>Duration:</strong> <span x-text="duration(flow.created,flow.finished)"></span></div>
+        <div><strong class="text-gray-300">ID:</strong> <span x-text="flow.id"></span></div>
+        <div><strong class="text-gray-300">Created:</strong> <span x-text="date(flow.created)"></span></div>
+        <div><strong class="text-gray-300">Type:</strong> <span x-text="flow.caseType"></span></div>
+        <div><strong class="text-gray-300">Finished:</strong> <span x-text="date(flow.finished)"></span></div>
+        <div><strong class="text-gray-300">Status:</strong> <span x-text="flow.state"></span></div>
+        <div><strong class="text-gray-300">Duration:</strong> <span x-text="duration(flow.created,flow.finished)"></span></div>
     </div>
 </section>
 
-<section class="bg-white p-4 rounded-lg shadow mb-4">
-    <h2 class="text-xl font-semibold mb-2">Task Timeline</h2>
-    <div class="relative border-l-2 border-gray-300 pl-4">
+<section class="bg-gray-800 p-4 rounded-lg shadow mb-4">
+    <h2 class="text-xl font-semibold mb-2 text-white">Task Timeline</h2>
+    <div class="relative border-l-2 border-gray-600 pl-4">
         <template x-for="task in flow.tasks" :key="task.id">
             <div class="mb-4 relative">
-                <a href="#" @click.prevent="selectedTask = task" class="text-blue-500 font-semibold block">
+                <a href="#" @click.prevent="selectedTask = task" class="text-blue-400 font-semibold block hover:text-blue-300">
                     <span x-text="task.step + ' / ' + task.worker + ' / ' + duration(task.created, task.finished)"></span>
                 </a>
                 <div class="ml-4 h-2" :class="getTaskColor(task)" :style="getTaskStyle(task)"></div>
@@ -37,23 +37,23 @@
 </section>
 
 <template x-if="selectedTask">
-    <section class="bg-white p-4 rounded-lg shadow mb-4">
-        <h2 class="text-xl font-semibold mb-2">Task Details</h2>
+    <section class="bg-gray-800 p-4 rounded-lg shadow mb-4">
+        <h2 class="text-xl font-semibold mb-2 text-white">Task Details</h2>
         <div class="grid grid-cols-2 gap-4">
-            <div><strong>Worker:</strong> <span x-text="selectedTask.worker"></span></div>
-            <div><strong>Start:</strong> <span x-text="date(selectedTask.created)"></span></div>
-            <div><strong>Response Code:</strong> <span x-text="selectedTask.responseCode"></span></div>
-            <div><strong>End:</strong> <span x-text="date(selectedTask.finished)"></span></div>
-            <div></div>
-            <div><strong>Duration:</strong> <span x-text="duration(selectedTask.created,selectedTask.finished)"></span></div>
+            <div><strong class="text-gray-300">ID:</strong> <span x-text="selectedTask.id"></span></div>
+            <div><strong class="text-gray-300">Start:</strong> <span x-text="date(selectedTask.created)"></span></div>
+            <div><strong class="text-gray-300">Worker:</strong> <span x-text="selectedTask.worker"></span></div>
+            <div><strong class="text-gray-300">End:</strong> <span x-text="date(selectedTask.finished)"></span></div>
+            <div><strong class="text-gray-300">Response Code:</strong> <span x-text="selectedTask.responseCode"></span></div>
+            <div><strong class="text-gray-300">Duration:</strong> <span x-text="duration(selectedTask.created,selectedTask.finished)"></span></div>
         </div>
-        <pre x-show="selectedTask.response" class="bg-gray-900 text-white p-4 rounded mt-4" x-text="JSON.stringify(selectedTask.response, null, 2)"></pre>
+        <pre x-show="selectedTask.response" class="bg-gray-900 text-gray-100 p-4 rounded mt-4" x-text="JSON.stringify(selectedTask.response, null, 2)"></pre>
         <pre x-show="selectedTask.error" class="bg-red-900 text-white p-4 rounded mt-4" x-text="selectedTask.error"></pre>
     </section>
 </template>
-<section class="bg-white p-4 rounded-lg shadow mb-4" x-show="flow.response">
-    <h2 class="text-xl font-semibold mb-2">Response Case Flow</h2>
-    <pre class="bg-gray-900 text-white p-4 rounded" x-text="JSON.stringify(flow.response, null, 2)"></pre>
+<section class="bg-gray-800 p-4 rounded-lg shadow mb-4" x-show="flow.response">
+    <h2 class="text-xl font-semibold mb-2 text-white">Response Case Flow</h2>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded" x-text="JSON.stringify(flow.response, null, 2)"></pre>
 </section>
 
 <script>

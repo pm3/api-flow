@@ -8,30 +8,34 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="p-4" x-data="dashboard">
+<body class="p-4 bg-gray-900 text-gray-100" x-data="dashboard">
 
 <!-- Header -->
-<header class="text-2xl font-bold mb-4">Case Flow Dashboard</header>
+<header class="text-2xl font-bold mb-4 text-white">Case Flow Dashboard</header>
 
 <!-- Filtrácia -->
 <section class="mb-4 flex gap-4">
-    <select x-model="filters.type" class="border p-2" @change="changeFilter('type')">
+    <select x-model="filters.type" class="border p-2 bg-gray-800 text-gray-100 border-gray-700 rounded" @change="changeFilter('type')">
         <option value="">Flow Type - All</option>
         <option value="group">Group by Type</option>
-        <template x-for="type in types" :key="type">
-            <option :value="type" x-text="type"></option>
-        </template>
+        <optgroup label="Flow Types">
+            <template x-for="type in types" :key="type">
+                <option :value="type" x-text="type"></option>
+            </template>
+        </optgroup>
     </select>
 
-    <select x-model="filters.state" class="border p-2" @change="changeFilter('state')">
+    <select x-model="filters.state" class="border p-2 bg-gray-800 text-gray-100 border-gray-700 rounded" @change="changeFilter('state')">
         <option value="">State - All</option>
         <option value="group">Group by State</option>
-        <option value="PROCESSING">Processing</option>
-        <option value="FINISHED">Finished</option>
-        <option value="ERROR">Error</option>
+        <optgroup label="States">
+            <option value="PROCESSING">Processing</option>
+            <option value="FINISHED">Finished</option>
+            <option value="ERROR">Error</option>
+        </optgroup>
     </select>
 
-    <select x-model="filters.time" class="border p-2" @change="changeFilter('time')">
+    <select x-model="filters.time" class="border p-2 bg-gray-800 text-gray-100 border-gray-700 rounded" @change="changeFilter('time')">
         <option value="">Time - All</option>
         <option value="day">This day</option>
         <option value="week">This week</option>
@@ -41,53 +45,53 @@
 
     <template x-if="filters.time === 'custom'">
         <div class="flex gap-2">
-            <input type="date" x-model="filters.dateFrom" class="border p-2" @change="changeFilter('time')">
-            <input type="date" x-model="filters.dateTo" class="border p-2" @change="changeFilter('time')">
+            <input type="date" x-model="filters.dateFrom" class="border p-2 bg-gray-800 text-gray-100 border-gray-700 rounded" @change="changeFilter('time')">
+            <input type="date" x-model="filters.dateTo" class="border p-2 bg-gray-800 text-gray-100 border-gray-700 rounded" @change="changeFilter('time')">
         </div>
     </template>
 </section>
 
 <!-- Sumar -->
-<section class="flex space-x-12 p-8 bg-white rounded-xl shadow-lg">
+<section class="flex space-x-12 p-8 bg-gray-800 rounded-xl shadow-lg mb-4">
     <div class="flex flex-col items-center justify-center">
-        <h2 class="text-4xl font-bold text-gray-700">Total</h2>
-        <div class="text-8xl font-extrabold text-blue-600 mt-4" x-text="summary.totalCount"></div>
+        <h2 class="text-4xl font-bold text-gray-300">Total</h2>
+        <div class="text-8xl font-extrabold text-blue-400 mt-4" x-text="summary.totalCount"></div>
     </div>
     <div class="w-96">
-        <canvas id="pieChart" @click="clickChart"></canvas>
+        <canvas id="summaryChart" @click="clickChart"></canvas>
     </div>
 </section>
 
 <!-- Tabuľka -->
-<table class="w-full border-collapse border">
+<table class="w-full border-collapse border border-gray-700">
     <thead>
-    <tr class="bg-gray-100">
-        <th class="border p-2">ID</th>
-        <th class="border p-2">Type</th>
-        <th class="border p-2">State</th>
-        <th class="border p-2">Created</th>
-        <th class="border p-2">Duration</th>
+    <tr class="bg-gray-800">
+        <th class="border p-2 border-gray-700">ID</th>
+        <th class="border p-2 border-gray-700">Type</th>
+        <th class="border p-2 border-gray-700">State</th>
+        <th class="border p-2 border-gray-700">Created</th>
+        <th class="border p-2 border-gray-700">Duration</th>
     </tr>
     </thead>
     <tbody>
     <template x-for="c in cases" :key="c.id">
-        <tr>
-            <td class="border p-2 text-blue-500 underline"><a :href="'case.html#'+c.id" x-text="c.id"></a></td>
-            <td class="border p-2" x-text="c.type"></td>
-            <td class="border p-2" x-text="c.state"></td>
-            <td class="border p-2" x-text="c.created"></td>
-            <td class="border p-2" x-text="duration(c.created, c.finished)"></td>
+        <tr class="hover:bg-gray-800">
+            <td class="border p-2 border-gray-700 text-blue-400 underline"><a :href="'case.html#'+c.id" x-text="c.id"></a></td>
+            <td class="border p-2 border-gray-700" x-text="c.type"></td>
+            <td class="border p-2 border-gray-700" x-text="c.state"></td>
+            <td class="border p-2 border-gray-700" x-text="c.created"></td>
+            <td class="border p-2 border-gray-700" x-text="duration(c.created, c.finished)"></td>
         </tr>
     </template>
     </tbody>
 </table>
 <!-- Next Button -->
 <div class="mt-4 text-center" x-show="cases && cases.length > 0">
-    <button @click="fetchCases(cases[cases.length-1].id)" class="bg-blue-500 text-white px-4 py-2 rounded">Next</button>
+    <button @click="fetchCases(cases[cases.length-1].id)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Next</button>
 </div>
 
 <!-- Footer -->
-<footer class="mt-4 text-center text-gray-500">&copy; 2025 Case Flow Dashboard</footer>
+<footer class="mt-4 text-center text-gray-400">&copy; 2025 Case Flow Dashboard</footer>
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -102,6 +106,7 @@
             types: [],
             summary: { totalCount: 0, grouped: [] },
             cases: [],
+            group: '',
             pieChart: undefined,
 
             init() {
@@ -134,8 +139,12 @@
             async fetchSummary() {
                 if(this.pieChart) this.pieChart.destroy();
                 this.pieChart = undefined;
+                this.group = '';
+                if(this.filters.type === 'group') this.group = 'type';
+                if(this.filters.state === 'group') this.group = 'state';
+                if(this.group=='' && ['day','week','month'].includes(this.filters.time)) this.group = 'time_'+this.filters.time;
                 const urlParams = {
-                    group: this.groupBy(),
+                    group: this.group,
                     type: this.filters.type && this.filters.type!='group' ? this.filters.type : undefined,
                     state: this.filters.state && this.filters.state!='group' ? this.filters.state : undefined,
                     date: this.filters.time==='custom' ? this.filters.dateFrom +'/'+this.filters.dateTo : this.filters.time,
@@ -148,11 +157,11 @@
                     this.summary = { totalCount: summary[0].count, grouped: [] };
                 } else {
                     const totalCount = summary.reduce((acc, item) => acc + item.count, 0);
-                    this.summary = { totalCount, grouped: summary.map(item => ({
-                        name: item.name,
-                        height: Math.round((item.count / totalCount) * 100),
-                    })) };
-                    this.renderGraph();
+                    this.summary = { 
+                        totalCount, 
+                        grouped: summary
+                    };
+                    this.renderGraph(this.group.startsWith('time_') ? 'bar' : 'doughnut');
                 }
             },
             async fetchCases(lastId) {
@@ -172,14 +181,16 @@
                     this.cases = rows;
                 }
             },
-            renderGraph(){
-                const ctx = document.getElementById('pieChart').getContext('2d');
+            renderGraph(type){
+                const ctx = document.getElementById('summaryChart').getContext('2d');
+                const total = this.summary.totalCount;
                 this.pieChart = new Chart(ctx, {
-                    type: 'pie', // Typ grafu
+                    type: type, // Typ grafu
                     data: {
                         labels: this.summary.grouped.map(item => item.name), // Názvy segmentov
                         datasets: [{
-                            data: this.summary.grouped.map(item => item.height), // Percentá
+                            label: 'Flow cases',
+                            data: this.summary.grouped.map(item => item.count), // Percentá
                             borderWidth: 1
                         }]
                     },
@@ -192,7 +203,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(tooltipItem) {
-                                        return tooltipItem.label + ': ' + tooltipItem.raw + '%';
+                                        return 'count=' + tooltipItem.raw + ' percent=' + Math.round(tooltipItem.raw/total*100)+'%';
                                     }
                                 }
                             }
@@ -208,11 +219,11 @@
                     if (points.length) {
                         const firstPoint = points[0];
                         const label = myChart.data.labels[firstPoint.index];
-                        if(label && this.filters.type === 'group') {
+                        if(label && this.group==='type') {
                             this.filters.type = label;
                             this.changeFilter('type');
                         }
-                        if(label && this.filters.state === 'group') {
+                        if(label && this.group==='state') {
                             this.filters.state = label;
                             this.changeFilter('state');
                         }
@@ -239,12 +250,6 @@
                 } else {
                     return '---';
                 }
-            },
-            groupBy(){
-                const groupBy = [];
-                if(this.filters.type === 'group') groupBy.push('type');
-                if(this.filters.state === 'group') groupBy.push('state');
-                return groupBy.join(',');
             },
             buildUriParams(map){
                 return Object.keys(map).filter(key=>map[key]).map(key => key + '=' + map[key]).join('&');

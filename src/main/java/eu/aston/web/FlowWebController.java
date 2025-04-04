@@ -47,6 +47,15 @@ public class FlowWebController {
         } else if("state".equals(group)){
             sb.append("select state as name, count(*) as count ");
             groupByPart = "state";
+        } else if("time_day".equals(group)){
+            sb.append("select to_char(created,'HH24') as name, count(*) as count ");
+            groupByPart = "to_char(created,'HH24')";
+        } else if("time_week".equals(group)){
+            sb.append("select to_char(created,'ID') || '-' || to_char(created,'Day') as name, count(*) as count ");
+            groupByPart = "to_char(created,'ID') || '-' || to_char(created,'Day')";
+        } else if("time_month".equals(group)){
+            sb.append("select to_char(created,'DD') as name, count(*) as count ");
+            groupByPart = "to_char(created,'DD')";
         } else {
             sb.append("select count(*) as count ");
         }
@@ -65,6 +74,7 @@ public class FlowWebController {
         if(groupByPart!=null){
             sb.append("group by ").append(groupByPart);
         }
+        sb.append(" order by 1 asc");
         LOGGER.info(sb.toString());
         return queryUtils.query(sb.toString(), params, FlowAgg.class);
     }
