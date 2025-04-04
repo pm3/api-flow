@@ -50,6 +50,7 @@ public class FlowCaseManager {
     private final FlowThreadPool flowThreadPool;
     private final CallbackRunner callbackRunner;
     private final SuperTimer superTimer;
+    private final FlowCounter flowCounter;
 
     public FlowCaseManager(BlobStore blobStore,
                            IFlowCaseStore caseStore,
@@ -59,7 +60,7 @@ public class FlowCaseManager {
                            WaitingFlowCaseManager waitingFlowCaseManager,
                            ISpanSender spanSender,
                            CallbackRunner callbackRunner,
-                           SuperTimer superTimer) {
+                           SuperTimer superTimer, FlowCounter flowCounter) {
         this.blobStore = blobStore;
         this.caseStore = caseStore;
         this.taskStore = taskStore;
@@ -69,6 +70,7 @@ public class FlowCaseManager {
         this.spanSender = spanSender;
         this.callbackRunner = callbackRunner;
         this.superTimer = superTimer;
+        this.flowCounter = flowCounter;
         this.flowThreadPool = new FlowThreadPool(4, this::nextTick);
     }
 
@@ -130,6 +132,7 @@ public class FlowCaseManager {
         caseStore.insert(entity);
         spanSender.createFlow(entity);
         flowThreadPool.addCase(id, id);
+        flowCounter.incrementFlowOk(caseCreate.caseType());
     }
 
     public FlowCase loadFlow(String id) {
@@ -328,6 +331,12 @@ public class FlowCaseManager {
         caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getState(), flowCaseEntity.getResponse());
         LOGGER.info("finish flow {}/{} {}", flowCaseEntity.getCaseType(), flowCaseEntity.getId(), flowCaseEntity.getState());
         spanSender.finishFlow(flowCaseEntity, flowDef, null);
+
+        if(Objects.equals(flowCaseEntity.getState(), FlowCase.FINISHED)){
+            flowCounter.incrementFlowOk(flowCaseEntity.getCaseType());
+        } else {
+            flowCounter.incrementFlowError(flowCaseEntity.getCaseType());
+        }
 
         //save to blob and clean db
         FlowCase flowCase = caseStore.loadFlowCaseById(flowCaseEntity.getId());
