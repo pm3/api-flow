@@ -22,7 +22,7 @@ import jakarta.inject.Singleton;
 @Singleton
 public class QueryUtils {
 
-    private DataSource dataSource;
+    private final DataSource dataSource;
 
     public QueryUtils(DataSource dataSource) {
         this.dataSource = dataSource;
