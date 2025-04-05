@@ -1,8 +1,8 @@
 package eu.aston.web;
 
-import io.micronaut.core.annotation.Introspected;
-
 import java.time.Instant;
+
+import io.micronaut.core.annotation.Introspected;
 
 @Introspected
 public class FlowHead {

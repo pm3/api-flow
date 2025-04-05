@@ -1,5 +1,8 @@
 package eu.aston.web;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
@@ -8,10 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 @Controller("/web/")
 @ApiResponse(responseCode = "200", description = "ok")
