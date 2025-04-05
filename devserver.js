@@ -8,7 +8,9 @@ const config = {
     port: 3000,
     staticDir: 'src/main/resources/public',
     proxies: {
-        '/flow/': 'https://flow-test.aidental.ai'
+        '/web/': 'https://flow-test.aidental.ai',
+        //'/web/': 'http://localhost:8080',
+        '/flow/': 'https://flow-test.aidental.ai',
     }
 };
 
