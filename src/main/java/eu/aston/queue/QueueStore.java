@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +34,7 @@ public class QueueStore {
         this.superTimer = superTimer;
         this.callbackRunner = callbackRunner;
         superTimer.schedulePeriod(Duration.ofMinutes(10).toMillis(), this::cleanSentEventMap);
+        superTimer.schedulePeriodTaskCreator(Duration.ofSeconds(1).toMillis(), this::timeoutSlowWorkers);
     }
 
     public SuperTimer getSuperTimer() {
@@ -122,8 +124,19 @@ public class QueueStore {
                 workerGroupAddEvents(workerGroup, new ArrayList<>(eventMap.values().stream().filter(e->e.getPath().startsWith(prefix)).toList()));
             }
         }
-        workerGroup.lastWorker = System.currentTimeMillis();
-        workerGroup.lastWorkerPing.put(worker.getId(), System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        workerGroup.lastWorker = now;
+        if(worker.getSlow()>0) {
+            workerGroup.lastWorkerPing.put(worker.getId()+"@slow", now);
+            // check if fast worker is still alive
+            if(workerGroup.lastWorkerFast+worker.getSlow()*1000L>now){
+                workerGroup.slowWorkers.add(worker);
+                return;
+            }
+        } else {
+            workerGroup.lastWorkerPing.put(worker.getId(), now);
+            workerGroup.lastWorkerFast = now;
+        }
         QueueEvent event = null;
         while(!workerGroup.events.isEmpty() && event==null) {
             String eventId = workerGroup.events.poll();
@@ -133,9 +146,11 @@ public class QueueStore {
         }
         if (event != null) {
             sendRemoteEvent(event, worker.removeResponse(), workerGroup);
-        } else {
+        } else if(worker.getSlow()==0) {
             workerGroup.workers.add(worker);
             superTimer.schedule(worker.getTimeout() * 1000L, worker, this::timeoutWorker);
+        } else {
+            workerGroup.slowWorkers.add(worker);
         }
     }
 
@@ -157,6 +172,40 @@ public class QueueStore {
                 LOGGER.debug("worker timeout {}", worker.getPrefix());
             }catch (Exception ignore){}
         }
+    }
+
+    private void timeoutSlowWorkers(Consumer<Runnable> executor) {
+        for (WorkerGroup wg : new ArrayList<>(workerTree.values())) {
+            for(Iterator<Worker> it = wg.slowWorkers.iterator(); it.hasNext(); ) {
+                Worker w = it.next();
+                if(w.created+w.getTimeout()*1000L < System.currentTimeMillis()) {
+                    it.remove();
+                    executor.accept(()->this.timeoutWorker(w));
+                    continue;
+                }
+                QueueEvent event = slowEvent(wg, w.getSlow()*1000L);
+                if(event!=null){
+                    it.remove();
+                    executor.accept(()->sendRemoteEvent(event, w.removeResponse(), wg));
+                }
+            }
+        }
+    }
+
+    private QueueEvent slowEvent(WorkerGroup wg, long slow) {
+        String eventId = wg.events.peek();
+        if (eventId != null) {
+            QueueEvent event = eventMap.get(eventId);
+            if (event != null) {
+                if(System.currentTimeMillis()-event.getT1()>slow || System.currentTimeMillis()-wg.lastWorkerFast>slow){
+                    String eventId2 = wg.events.poll();
+                    if(eventId2!=null) {
+                        return eventMap.get(eventId2);
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     public void response(String eventId, int status, Map<String, String> headers, byte[] body) {

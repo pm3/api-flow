@@ -41,6 +41,19 @@ public class SuperTimer {
         timer.schedule(timerTask(r), period, period);
     }
 
+    public void schedulePeriodTaskCreator(long period, Consumer<Consumer<Runnable>> taskCreator) {
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try{
+                    taskCreator.accept(executor::execute);
+                }catch (Exception e){
+                    logException(e);
+                }
+            }
+        }, period, period);
+    }
+
     public void execute(Runnable r){
         executor.execute(r);
     }
