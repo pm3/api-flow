@@ -12,12 +12,6 @@ import io.micronaut.core.annotation.Introspected;
 @Introspected
 public class FlowCase {
 
-    public static final String FINISHED = "FINISHED";
-    public static final String ERROR = "ERROR";
-
-    public static final String STEP_STATE_PREF = "step-";
-    public static final String CREATED = "CREATED";
-
     private String id;
     private String caseType;
     private String externalId;
@@ -33,7 +27,8 @@ public class FlowCase {
 
     private Instant created;
     private Instant finished;
-    private String state;
+    private CaseState state;
+    private String step;
 
     @Format(JsonConverterFactory.JSON)
     private List<FlowTask> tasks;
@@ -110,12 +105,20 @@ public class FlowCase {
         this.finished = finished;
     }
 
-    public String getState() {
+    public CaseState getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(CaseState state) {
         this.state = state;
+    }
+
+    public String getStep() {
+        return step;
+    }
+
+    public void setStep(String step) {
+        this.step = step;
     }
 
     public List<FlowTask> getTasks() {

@@ -19,6 +19,7 @@
         <div><strong class="text-gray-300">Finished:</strong> <span x-text="date(flow.finished)"></span></div>
         <div><strong class="text-gray-300">Status:</strong> <span x-text="flow.state"></span></div>
         <div><strong class="text-gray-300">Duration:</strong> <span x-text="duration(flow.created,flow.finished)"></span></div>
+        <div><strong class="text-gray-300" x-show="flow.step">Step:</strong> <span x-text="flow.step"></span></div>
     </div>
 </section>
 

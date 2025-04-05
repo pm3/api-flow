@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import eu.aston.flow.model.CaseState;
 import eu.aston.flow.model.FlowAsset;
 import eu.aston.header.Callback;
 import eu.aston.micronaut.sql.convert.JsonConverterFactory;
@@ -27,7 +28,8 @@ public class FlowCaseEntity {
 
     private Instant created;
     private Instant finished;
-    private String state;
+    private CaseState state;
+    private String step;
 
     public String getId() {
         return id;
@@ -101,12 +103,20 @@ public class FlowCaseEntity {
         this.finished = finished;
     }
 
-    public String getState() {
+    public CaseState getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(CaseState state) {
         this.state = state;
+    }
+
+    public String getStep() {
+        return step;
+    }
+
+    public void setStep(String step) {
+        this.step = step;
     }
 
     @Override

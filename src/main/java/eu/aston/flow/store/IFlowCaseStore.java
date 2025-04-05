@@ -3,6 +3,7 @@ package eu.aston.flow.store;
 import java.util.List;
 import java.util.Optional;
 
+import eu.aston.flow.model.CaseState;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.micronaut.sql.aop.Query;
 import eu.aston.micronaut.sql.aop.SqlApi;
@@ -20,17 +21,18 @@ public interface IFlowCaseStore {
            update flow_case
            set finished=current_timestamp,
            response=:response,
-           state=:state
+           state=:state,
+           step=:step
            where id=:id
            """)
-    void finishFlow(String id, String state, @Format(JsonConverterFactory.JSON) Object response);
+    void finishFlow(String id, CaseState state, String step, @Format(JsonConverterFactory.JSON) Object response);
 
     @Query("""
            update flow_case
-           set state=:state
+           set state=:state, step=:step
            where id=:id
            """)
-    void updateFlowState(String id, String state);
+    void updateFlowState(String id, CaseState state, String step);
 
     @Query("""
            select *

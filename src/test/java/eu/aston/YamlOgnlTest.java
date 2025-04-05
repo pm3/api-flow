@@ -17,6 +17,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.IFlowExecutor;
 import eu.aston.flow.def.FlowDef;
+import eu.aston.flow.model.CaseState;
 import eu.aston.flow.ognl.YamlOgnlFlowExecutor;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
@@ -71,7 +72,8 @@ public class YamlOgnlTest {
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
         flowCase.setCaseType(flow1.getCode());
-        flowCase.setState("step-step1");
+        flowCase.setState(CaseState.WORKING);
+        flowCase.setStep("step-step1");
         flowCase.setParams(new HashMap<>());
         flowCase.getParams().put("a", "a");
         flowCase.getParams().put("b", "b");
@@ -102,7 +104,8 @@ public class YamlOgnlTest {
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
         flowCase.setCaseType(flow1.getCode());
-        flowCase.setState("step-step2");
+        flowCase.setState(CaseState.WORKING);
+        flowCase.setStep("step-step2");
         flowCase.setParams(new HashMap<>());
         flowCase.getParams().put("a", "a");
         flowCase.getParams().put("b", "b");
@@ -137,7 +140,8 @@ public class YamlOgnlTest {
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
         flowCase.setCaseType(flow1.getCode());
-        flowCase.setState("step-step2");
+        flowCase.setState(CaseState.WORKING);
+        flowCase.setStep("step-step2");
         flowCase.setParams(new HashMap<>());
         flowCase.getParams().put("a", "a");
         flowCase.getParams().put("b", "b");
@@ -199,7 +203,8 @@ public class YamlOgnlTest {
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(ID.newId());
         flowCase.setCaseType(flow1.getCode());
-        flowCase.setState("step-step3");
+        flowCase.setState(CaseState.WORKING);
+        flowCase.setStep("step-step3");
         flowCase.setParams(new HashMap<>());
         flowCase.getParams().put("a", "a");
         flowCase.getParams().put("b", "b");

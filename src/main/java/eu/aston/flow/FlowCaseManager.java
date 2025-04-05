@@ -18,6 +18,7 @@ import eu.aston.flow.model.FlowAsset;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowCaseCreate;
 import eu.aston.flow.model.FlowTask;
+import eu.aston.flow.model.CaseState;
 import eu.aston.flow.store.FlowCaseEntity;
 import eu.aston.flow.store.FlowTaskEntity;
 import eu.aston.flow.store.IFlowCaseStore;
@@ -128,7 +129,7 @@ public class FlowCaseManager {
         entity.setParams(caseCreate.params());
         entity.setAssets(flowAssets);
         entity.setCreated(created);
-        entity.setState(FlowCase.CREATED);
+        entity.setState(CaseState.CREATED);
         caseStore.insert(entity);
         spanSender.createFlow(entity);
         flowThreadPool.addCase(id, id);
@@ -192,7 +193,7 @@ public class FlowCaseManager {
                                       .orElseThrow(()->new UserException("invalid flowCaseType id="+flowCase.getId()+", type="+flowCase.getCaseType()));
         List<FlowTaskEntity> tasks = taskStore.selectTaskByCaseId(flowCase.getId());
 
-        LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getState());
+        LOGGER.info("nextTick {}/{} {}", flowCase.getCaseType(), flowCase.getId(), flowCase.getStep());
 
         String aktStepCode = openTasks(flowDef, flowCase, tasks);
         if(aktStepCode!=null){
@@ -223,8 +224,10 @@ public class FlowCaseManager {
 
     private String openTasks(FlowDef flowDef, FlowCaseEntity flowCase, List<FlowTaskEntity> tasks) {
 
-        String aktState = FlowCaseManager.stepFromState(flowCase.getState());
-        FlowStepDef aktStep = aktState!=null ? flowDef.getSteps().stream().filter(s-> Objects.equals(s.getCode(), aktState)).findFirst().orElse(null) : null;
+        FlowStepDef aktStep = null;
+        if(flowCase.getStep()!=null){
+            aktStep = flowDef.getSteps().stream().filter(s-> Objects.equals(s.getCode(), flowCase.getStep())).findFirst().orElse(null);
+        }
 
         if(aktStep!=null) {
             int maxIndex = 1;
@@ -285,8 +288,9 @@ public class FlowCaseManager {
         if(next!=null){
             LOGGER.info("next step {} {}", flowCase.getId(), next.getCode());
             //spustam novy step
-            flowCase.setState(FlowCase.STEP_STATE_PREF+next.getCode());
-            caseStore.updateFlowState(flowCase.getId(), flowCase.getState());
+            flowCase.setState(CaseState.WORKING);
+            flowCase.setStep(next.getCode());
+            caseStore.updateFlowState(flowCase.getId(), flowCase.getState(), flowCase.getStep());
             return openTasks(flowDef, flowCase, tasks);
         }
         //uz nemam next, koncim
@@ -301,16 +305,17 @@ public class FlowCaseManager {
     }
 
     private FlowStepDef nextStep(FlowCaseEntity flowCase, FlowDef flowDef) {
-        if(flowCase.getState()==null || Objects.equals(flowCase.getState(),FlowCase.CREATED)){
+        if(flowCase.getState()==CaseState.FINISHED || flowCase.getState()==CaseState.ERROR){
+            return null;
+        }
+        String stepCode = flowCase.getStep();
+        if(stepCode==null){
             return flowDef.getSteps().getFirst();
         }
-        if(flowCase.getState().startsWith(FlowCase.STEP_STATE_PREF)){
-            String stepCode = flowCase.getState().substring(FlowCase.STEP_STATE_PREF.length());
-            List<FlowStepDef> steps = flowDef.getSteps();
-            for(int i=1; i<steps.size(); i++){
-                if(stepCode.equals(steps.get(i-1).getCode())){
-                    return steps.get(i);
-                }
+        List<FlowStepDef> steps = flowDef.getSteps();
+        for(int i=1; i<steps.size(); i++){
+            if(stepCode.equals(steps.get(i-1).getCode())){
+                return steps.get(i);
             }
         }
         return null;
@@ -324,15 +329,16 @@ public class FlowCaseManager {
             //tasks.remove(finishTask);
         }
         flowCaseEntity.setFinished(Instant.now());
-        flowCaseEntity.setState(FlowCase.FINISHED);
+        flowCaseEntity.setState(CaseState.FINISHED);
+        flowCaseEntity.setStep(null);
         if(finishTask!=null && finishTask.getError()!=null){
-            flowCaseEntity.setState(FlowCase.ERROR);
+            flowCaseEntity.setState(CaseState.ERROR);
         }
-        caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getState(), flowCaseEntity.getResponse());
+        caseStore.finishFlow(flowCaseEntity.getId(), flowCaseEntity.getState(), flowCaseEntity.getStep(), flowCaseEntity.getResponse());
         LOGGER.info("finish flow {}/{} {}", flowCaseEntity.getCaseType(), flowCaseEntity.getId(), flowCaseEntity.getState());
         spanSender.finishFlow(flowCaseEntity, flowDef, null);
 
-        if(Objects.equals(flowCaseEntity.getState(), FlowCase.FINISHED)){
+        if(Objects.equals(flowCaseEntity.getState(), CaseState.FINISHED)){
             flowCounter.incrementFlowOk(flowCaseEntity.getCaseType());
         } else {
             flowCounter.incrementFlowError(flowCaseEntity.getCaseType());
@@ -368,10 +374,6 @@ public class FlowCaseManager {
         taskStore.queueSent(taskId);
     }
 
-    public static String stepFromState(String state){
-        return state.startsWith(FlowCase.STEP_STATE_PREF) ? state.substring(FlowCase.STEP_STATE_PREF.length()) : null;
-    }
-
     public void reprocess(String newCaseId, FlowCase flowCase2, List<FlowTask> tasks2) {
         FlowCaseEntity flowCase = new FlowCaseEntity();
         flowCase.setId(newCaseId);
@@ -381,7 +383,7 @@ public class FlowCaseManager {
         flowCase.setParams(flowCase2.getParams());
         flowCase.setAssets(flowCase2.getAssets());
         flowCase.setCreated(Instant.now());
-        flowCase.setState(FlowCase.CREATED);
+        flowCase.setState(CaseState.WORKING);
         caseStore.insert(flowCase);
         for(FlowTask task2 : tasks2) {
             FlowTaskEntity task = new FlowTaskEntity();
