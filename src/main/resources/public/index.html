@@ -130,7 +130,7 @@
                 this.fetchCases();
             },
             async fetchTypes() {
-                const res = await fetch('/web/types');
+                const res = await fetch('/flow/web/types');
                 this.types = await res.json();
                 const old = this.filters.type;
                 this.filters.type = '';
@@ -149,7 +149,7 @@
                     state: this.filters.state && this.filters.state!='group' ? this.filters.state : undefined,
                     date: this.filters.time==='custom' ? this.filters.dateFrom +'/'+this.filters.dateTo : this.filters.time,
                 };
-                const res = await fetch('/web/agg?' + this.buildUriParams(urlParams));
+                const res = await fetch('/flow/web/agg?' + this.buildUriParams(urlParams));
                 const summary = await res.json();
                 if(summary.length==0){
                     this.summary = { totalCount: 0, grouped: [] };
@@ -173,7 +173,7 @@
                 };
                 hash = v => v ? v : '-';
                 window.location.hash = "/type/"+hash(this.filters.type)+"/state/"+hash(this.filters.state)+"/time/"+hash(this.filters.time)+"/date/"+hash(this.filters.dateFrom)+"/"+hash(this.filters.dateTo);
-                const res = await fetch('/web/cases?' + this.buildUriParams(urlParams));
+                const res = await fetch('/flow/web/cases?' + this.buildUriParams(urlParams));
                 const rows = await res.json();
                 if(lastId){
                     this.cases = this.cases.concat(rows);

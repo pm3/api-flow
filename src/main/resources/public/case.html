@@ -72,7 +72,7 @@
                 this.fetchCase(id);
             },
             async fetchCase(id) {
-                let response = await fetch(`/flow/case/${id}?full=true`);
+                let response = await fetch(`/flow/web/case/${id}`);
                 this.flow = await response.json();
                 this.calculateTimeScale();
             },

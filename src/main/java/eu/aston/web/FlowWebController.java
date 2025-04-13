@@ -3,25 +3,39 @@ package eu.aston.web;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.aston.blob.BlobStore;
+import eu.aston.flow.FlowCaseManager;
+import eu.aston.flow.model.FlowCase;
+import eu.aston.flow.store.IFlowCaseStore;
+import eu.aston.flow.store.IFlowTaskStore;
+import eu.aston.user.UserException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.QueryValue;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Controller("/web/")
+@Controller("/flow/web/")
 @ApiResponse(responseCode = "200", description = "ok")
 public class FlowWebController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlowWebController.class);
 
     private final QueryUtils queryUtils;
+    private final IFlowCaseStore flowCaseStore;
+    private final IFlowTaskStore taskStore;
+    private final BlobStore blobStore;
 
-    public FlowWebController(QueryUtils queryUtils) {
+    public FlowWebController(QueryUtils queryUtils, IFlowCaseStore flowCaseStore, IFlowTaskStore taskStore,
+                             BlobStore blobStore) {
         this.queryUtils = queryUtils;
+        this.flowCaseStore = flowCaseStore;
+        this.taskStore = taskStore;
+        this.blobStore = blobStore;
     }
 
     @Operation(tags = {"web"})
@@ -101,6 +115,28 @@ public class FlowWebController {
         sb.append("limit 50 ");
         LOGGER.info(sb.toString());
         return queryUtils.query(sb.toString(), params, FlowHead.class);
+    }
+
+    @Operation(tags = {"web"})
+    @Get("/case/{id}")
+    public FlowCase cases(@PathVariable String id){
+        FlowCase flowCase = flowCaseStore.loadFlowCaseById(id);
+        if(flowCase==null){
+            throw new UserException("case not found, case="+id);
+        }
+        if(flowCase.getFinished()!=null) {
+            try{
+                FlowCase finalCase = blobStore.loadFinalCase(flowCase.getCaseType(), flowCase.getId());
+                if(finalCase!=null) return finalCase;
+            }catch (Exception e){
+                LOGGER.debug("error load final case {}",e.getMessage(), e);
+                return flowCase;
+            }
+        }
+        if(flowCase.getFinished()==null && flowCase.getTasks()==null){
+            flowCase.setTasks(taskStore.selectFlowTaskByCaseId(flowCase.getId()));
+        }
+        return flowCase;
     }
 
     private void filterDate(String date, StringBuilder sb, List<Object> params){
