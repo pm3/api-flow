@@ -16,6 +16,7 @@ public class FlowWorkerDef {
     private Map<String, String> labels;
     private boolean blocked;
     private Integer timeout;
+    private boolean optional;
 
     public String getCode() {
         return code;
@@ -95,6 +96,14 @@ public class FlowWorkerDef {
 
     public void setTimeout(Integer timeout) {
         this.timeout = timeout;
+    }
+
+    public boolean isOptional() {
+        return optional;
+    }
+
+    public void setOptional(boolean optional) {
+        this.optional = optional;
     }
 
     @Override
