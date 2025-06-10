@@ -13,6 +13,7 @@ public class FlowWorkerDef {
     private Map<String, String> headers;
     private Map<String, Object> params;
     private String where;
+    private Object whereFalseResponse;
     private Map<String, String> labels;
     private boolean blocked;
     private Integer timeout;
@@ -71,6 +72,14 @@ public class FlowWorkerDef {
 
     public void setWhere(String where) {
         this.where = where;
+    }
+
+    public Object getWhereFalseResponse() {
+        return whereFalseResponse;
+    }
+
+    public void setWhereFalseResponse(Object whereFalseResponse) {
+        this.whereFalseResponse = whereFalseResponse;
     }
 
     public Map<String, String> getLabels() {

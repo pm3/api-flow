@@ -144,6 +144,10 @@ Trieda `FlowWorkerDef` definuje worker, ktorý vykonáva konkrétnu HTTP požiad
   - Typ: `Integer`
   - Popis: Časový limit (v sekundách) pre vykonanie požiadavky.
 
+- **`whereFalseResponse`**: 
+  - Typ: `Object`
+  - Popis: Dáta, ktoré sa nastavia do odpovede workera, ak je podmienka `where` nepravdivá. Ak je tento parameter nastavený, response code bude 200. Ak nie je nastavený, response code bude 406.
+
 ---
 
 ## Príklad YAML konfigurácie flow
@@ -162,6 +166,16 @@ steps:
         params:
           a: 1 # konstantný parameter
           $a: case.params.a # výraz
+      - code: workerWithWhere
+        path: POST
+        where: case.params.shouldRun
+        whereFalseResponse:
+          message: "Worker bol preskočený, pretože where podmienka bola nepravdivá."
+          dovod: "Podmienka nesplnená"
+        headers:
+          header1: header1
+        params:
+          a: 2
   - code: step2
     itemsExpr: case.assets
     workers:

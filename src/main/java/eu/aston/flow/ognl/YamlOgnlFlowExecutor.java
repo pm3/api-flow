@@ -127,7 +127,11 @@ public class YamlOgnlFlowExecutor implements IFlowExecutor {
         if(workerDef.getWhere()!=null){
             try{
                 if(!flowScript.execWhere(workerDef.getWhere())){
-                    flowBack.finishTask(task, 406, "where=false");
+                    if(workerDef.getWhereFalseResponse()!=null){
+                        flowBack.finishTask(task, 200, workerDef.getWhereFalseResponse());
+                    } else {
+                        flowBack.finishTask(task, 406, "where false");
+                    }
                     return;
                 }
             }catch (WaitingException e){

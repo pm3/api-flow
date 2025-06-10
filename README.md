@@ -12,7 +12,7 @@ The stateless nature of microservices allows for simplicity and scalability. Alt
 
 ### Cron Job
 
-An internal cron job is a stateful operation, which conflicts with the stateless nature of microservices. When multiple containers are running simultaneously, it’s necessary to manage parallel access with a **global lock**. If no container is running, the cron job may fail without any record that the task was not executed. Error reporting must also be considered, meaning the system needs a method to log where and how errors occurred.
+An internal cron job is a stateful operation, which conflicts with the stateless nature of microservices. When multiple containers are running simultaneously, it's necessary to manage parallel access with a **global lock**. If no container is running, the cron job may fail without any record that the task was not executed. Error reporting must also be considered, meaning the system needs a method to log where and how errors occurred.
 
 An **external cron job** addresses these issues by being implemented as a web service, which can be called by an external cron daemon. This approach provides several advantages:
   - **Logging**: Every call, whether successful or unsuccessful, is logged.
@@ -151,6 +151,10 @@ The `FlowWorkerDef` class defines a worker that executes a specific HTTP request
   - Type: `Integer`
   - Description: The time limit (in seconds) for executing the request.
 
+- **`whereFalseResponse`**: 
+  - Type: `Object`
+  - Description: Data to be set in the worker response if the `where` condition is false. If this parameter is set, the response code will be 200. If not set, the response code will be 406.
+
 ---
 
 ## Example YAML Configuration of Flow
@@ -169,6 +173,16 @@ steps:
         params:
           a: 1 # constant parameter
           $a: case.params.a # expression
+      - code: workerWithWhere
+        path: POST
+        where: case.params.shouldRun
+        whereFalseResponse:
+          message: "Worker was skipped because where condition was false."
+          reason: "Condition not met"
+        headers:
+          header1: header1
+        params:
+          a: 2
   - code: step2
     itemsExpr: case.assets
     workers:
