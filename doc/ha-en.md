@@ -60,6 +60,7 @@ backoff = "exponential"
 type = "disk"
 max_size = 100_000_000 # 100 MB
 ---
+```
 
 
 ## 🧩 3. Multiple `api-flow` Backends with `partition` Routing
