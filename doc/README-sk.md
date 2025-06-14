@@ -28,7 +28,7 @@ Architektúra s brokerom, ktorý využíva **queue** alebo **topic**, predstavuj
 
 ## Čo je API-Flow?
 
-API-Flow je aplikácia navrhnutá na riadenie background procesov v microservices architektúre. Jeho hlavnou úlohou je **materializovať stav spracovania jednotlivých flow**; každá bežiaca inštancia flow sa nazýva **case**. Tento case obsahuje vstupné parametre a má definovaný **workflow** – proces, podľa ktorého postupne spúšťa jednotlivé úlohy. Každý case má zoznam krokov (steps), ktoré sa vykonávajú sériovo jeden za druhým.
+API-Flow je aplikácia navrhnutá na riadenie background procesov v microservices architektúre. Jeho hlavnou úlohou je **materializovať stav spracovania jednotlivých flow a zabezpečiť jeho vizualizáciu**; každá bežiaca inštancia flow sa nazýva **case**. Tento case obsahuje vstupné parametre a má definovaný **workflow** – proces, podľa ktorého postupne spúšťa jednotlivé úlohy. Každý case má zoznam krokov (steps), ktoré sa vykonávajú sériovo jeden za druhým.
 
 Kroky môžu byť rôzneho typu, buď **single** (jednoduchý krok vykonávaný raz) alebo **multi** (krok s iterátorom, ktorý vracia zoznam položiek, pre každú položku sa vykoná celý krok). Každý krok obsahuje zoznam workerov, pričom worker predstavuje definíciu HTTP volania webovej služby (zahŕňa method, link, headers a body). Bežiaca inštancia workera sa nazýva **task**.
 

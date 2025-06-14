@@ -208,4 +208,12 @@ For `headers` and `params`, these are maps. If the name of the parameter starts 
 
 If there is only one property in the map named `$`, the output is not a map but rather the value evaluated from the expression parameter value.
 
+## Additional Documentation
+
+For more detailed information, please refer to the following documentation files:
+
+- [Slovak Documentation](doc/README-sk.md)
+- [High Availability Documentation (English)](doc/ha-en.md)
+- [High Availability Documentation (Slovak)](doc/ha-sk.md)
+
 
