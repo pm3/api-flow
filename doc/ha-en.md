@@ -1,7 +1,7 @@
 
-# High Availability of Stateful Applications with `vector.dev`
+# High Availability of api-flow with `vector.dev`
 
-This document describes how to achieve high availability of HTTP endpoints in a stateful application using the `vector.dev` proxy, which enables:
+This document describes how to achieve high availability of HTTP endpoints in a api-flow using the `vector.dev` proxy, which enables:
 
 - buffering of requests during backend outages,
 - retrying on target failures,

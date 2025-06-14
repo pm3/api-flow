@@ -1,7 +1,7 @@
 
-# Vysoká dostupnosť stavovej aplikácie pomocou `vector.dev`
+# Vysoká dostupnosť api-flow pomocou `vector.dev`
 
-Tento dokument popisuje, ako možno dosiahnuť vysokú dostupnosť HTTP endpointov stavovej aplikácie pomocou `vector.dev` proxy, ktorá umožňuje:
+Tento dokument popisuje, ako možno dosiahnuť vysokú dostupnosť HTTP endpointov api-flow pomocou `vector.dev` proxy, ktorá umožňuje:
 
 - buffering požiadaviek počas výpadku backendu,
 - retry pri výpadku cieľa,
