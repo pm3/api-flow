@@ -13,11 +13,12 @@ import eu.aston.flow.model.ClearCase;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.model.FlowTask;
 import eu.aston.flow.model.IdValue;
-import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
 import eu.aston.utils.ID;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Header;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,8 +51,8 @@ public class FlowReprocessController {
     @Operation(tags = {"case"})
     @Post("/case/{id}/reprocess")
     public IdValue reprocess(@PathVariable String id,
-                          @Body ClearCase clearCase,
-                          @Parameter(hidden = true) UserContext userContext) {
+                             @Body ClearCase clearCase,
+                             @Nullable @Header("X-Api-Key") String apiKey) {
         FlowCase flowCase = flowCaseManager.loadFlow(id);
         if(flowCase==null){
             throw new UserException("case not found, case="+id);
@@ -61,7 +62,7 @@ public class FlowReprocessController {
         }
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                                       .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
+        flowDefStore.checkCaseAuth(flowDef, apiKey);
 
         FlowCase finalCase = null;
         try{

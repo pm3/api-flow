@@ -11,7 +11,6 @@ import eu.aston.blob.AzureBlobAuthBuilder;
 import eu.aston.blob.BlobStore;
 import eu.aston.flow.FlowDefStore;
 import eu.aston.flow.nodejs.NodeJsFlowExecutor;
-import eu.aston.utils.JwtVerify;
 import eu.aston.utils.SuperTimer;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
@@ -43,18 +42,13 @@ public class AppFactory {
         return new BlobStore(httpClient, objectMapper, azureBlobAuthBuilder);
     }
 
-    @Singleton
-    public JwtVerify jwtVerify(HttpClient httpClient, ObjectMapper objectMapper){
-        return new JwtVerify(httpClient, objectMapper);
-    }
 
     @Singleton
     public FlowDefStore flowDefStore(HttpClient httpClient,
                                      ObjectMapper objectMapper,
                                      @Value("${app.rootDir}") File root,
-                                     JwtVerify jwtVerify,
                                      NodeJsFlowExecutor nodeJsFlowExecutor){
-        FlowDefStore flowDefStore = new FlowDefStore(httpClient, objectMapper, jwtVerify, nodeJsFlowExecutor);
+        FlowDefStore flowDefStore = new FlowDefStore(httpClient, objectMapper, nodeJsFlowExecutor);
         flowDefStore.setDefaultTimeout(120);
         flowDefStore.loadRoot(root, false);
         return flowDefStore;

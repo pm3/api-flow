@@ -45,7 +45,7 @@ public class YamlOgnlTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
-        flowDefStore = new FlowDefStore(httpClient, objectMapper, null, null);
+        flowDefStore = new FlowDefStore(httpClient, objectMapper, null);
         appConfig = new AppConfig();
         appConfig.setWorkerApiKey("123");
         appConfig.setAppHost("http://localhost:8080");

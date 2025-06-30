@@ -5,7 +5,7 @@ import java.util.Map;
 
 public final class FlowDef {
     private String code;
-    private String auth;
+    private List<String> apiKeys;
     private String executor;
     private List<FlowStepDef> steps;
     private Map<String, String> labels;
@@ -22,12 +22,12 @@ public final class FlowDef {
         this.code = code;
     }
 
-    public String getAuth() {
-        return auth;
+    public List<String> getApiKeys() {
+        return apiKeys;
     }
 
-    public void setAuth(String auth) {
-        this.auth = auth;
+    public void setApiKeys(List<String> apiKeys) {
+        this.apiKeys = apiKeys;
     }
 
     public String getExecutor() {

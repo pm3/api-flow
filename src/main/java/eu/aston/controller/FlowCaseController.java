@@ -19,7 +19,6 @@ import eu.aston.flow.model.IdValue;
 import eu.aston.flow.store.IFlowTaskStore;
 import eu.aston.header.Callback;
 import eu.aston.header.HeaderConverter;
-import eu.aston.user.UserContext;
 import eu.aston.user.UserException;
 import eu.aston.utils.BaseValid;
 import eu.aston.utils.ID;
@@ -30,6 +29,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.Header;
 import io.micronaut.http.annotation.Part;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
@@ -37,7 +37,6 @@ import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.http.multipart.CompletedFileUpload;
 import io.micronaut.http.multipart.CompletedPart;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import ognl.Ognl;
@@ -77,12 +76,12 @@ public class FlowCaseController {
     @Operation(tags = {"case"})
     @Post("/start/{caseType}")
     public IdValue createCaseFromParams(@PathVariable String caseType,
-                              HttpRequest<Map<String, Object>> request,
-                              @Parameter(hidden = true) UserContext userContext) {
+                                        HttpRequest<Map<String, Object>> request,
+                                        @Nullable @Header("X-Api-Key") String apiKey) {
         BaseValid.str(caseType, 1, 128, "caseType");
         FlowDef flowDef = flowDefStore.flowDef(caseType)
                 .orElseThrow(()->new UserException("invalid case type, case="+caseType));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        flowDefStore.checkCaseAuth(flowDef, apiKey);
         Map<String, Object> params = request.getBody().orElse(new HashMap<>());
         List<String> assets = null;
         if(flowDef.getParamsAssetExpr()!=null){
@@ -122,13 +121,13 @@ public class FlowCaseController {
     @Operation(tags = {"case"})
     @Post("/case")
     public IdValue createCase(@Body FlowCaseCreate caseCreate,
-                              @Parameter(hidden = true) UserContext userContext) {
+                              @Nullable @Header("X-Api-Key") String apiKey) {
         BaseValid.str(caseCreate.caseType(), 1, 128, "type");
         BaseValid.str(caseCreate.externalId(), -1, 128, "externalId");
 
         FlowDef flowDef = flowDefStore.flowDef(caseCreate.caseType())
                 .orElseThrow(()->new UserException("invalid case type, case="+caseCreate.caseType()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        flowDefStore.checkCaseAuth(flowDef, apiKey);
         String caseId = ID.newId();
         LOGGER.info("start flow {} {}", caseCreate.caseType(), caseId);
         flowCaseManager.createFlow(caseId, caseCreate);
@@ -138,9 +137,9 @@ public class FlowCaseController {
     @Operation(tags = {"case"})
     @Get("/case/{id}")
     public CompletableFuture<FlowCase> fetchCase(@PathVariable String id,
-                                             @QueryValue @Nullable Integer waitTimeSeconds,
-                                             @QueryValue @Nullable Boolean full,
-                                             @Parameter(hidden = true) UserContext userContext){
+                                                 @QueryValue @Nullable Integer waitTimeSeconds,
+                                                 @QueryValue @Nullable Boolean full,
+                                                 @Nullable @Header("X-Api-Key") String apiKey){
 
         CompletableFuture<FlowCase> future = new CompletableFuture<>();
         FlowCase flowCase = flowCaseManager.loadFlow(id);
@@ -149,7 +148,7 @@ public class FlowCaseController {
         }
         FlowDef flowDef = flowDefStore.flowDef(flowCase.getCaseType())
                 .orElseThrow(()->new UserException("invalid case type, case="+flowCase.getCaseType()+"/"+flowCase.getId()));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/"+id);
+        flowDefStore.checkCaseAuth(flowDef, apiKey);
 
         if (waitTimeSeconds!=null && waitTimeSeconds>0 && flowCase.getFinished()==null) {
             if(waitTimeSeconds>55) waitTimeSeconds = 55;
@@ -202,7 +201,7 @@ public class FlowCaseController {
             @Nullable @Part CompletedFileUpload params,
             @Nullable String callbackUrl,
             @Nullable @Part CompletedPart calbackHeaders,
-            @Parameter(hidden = true) UserContext userContext) {
+            @Nullable @Header("X-Api-Key") String apiKey) {
 
         String fileName = file.getFilename();
         if (fileName != null && !fileName.matches("^[A-Za-z0-9-_,\\s]{1,60}[.]{1}[A-Za-z0-9]{3,4}$"))
@@ -210,7 +209,7 @@ public class FlowCaseController {
 
         FlowDef flowDef = flowDefStore.flowDef(caseType)
                 .orElseThrow(()->new UserException("invalid case type, case="+caseType));
-        flowDefStore.checkCaseAuth(flowDef.getAuth(), userContext, flowDef.getCode()+"/create");
+        flowDefStore.checkCaseAuth(flowDef, apiKey);
 
         String assetId = ID.newId();
         try{

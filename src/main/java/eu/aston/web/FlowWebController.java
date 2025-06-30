@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import eu.aston.blob.BlobStore;
-import eu.aston.flow.FlowCaseManager;
 import eu.aston.flow.model.FlowCase;
 import eu.aston.flow.store.IFlowCaseStore;
 import eu.aston.flow.store.IFlowTaskStore;
